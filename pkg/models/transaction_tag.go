@@ -3,10 +3,11 @@ package models
 // TransactionTag represents transaction tag data stored in database
 type TransactionTag struct {
 	TagId           int64  `xorm:"PK"`
-	Uid             int64  `xorm:"INDEX(IDX_tag_uid_deleted_order) NOT NULL"`
-	Deleted         bool   `xorm:"INDEX(IDX_tag_uid_deleted_order) NOT NULL"`
+	Uid             int64  `xorm:"INDEX(IDX_tag_fund_uid_deleted_order) NOT NULL"`
+	FundId          int64  `xorm:"INDEX(IDX_tag_fund_uid_deleted_order) NOT NULL"`
+	Deleted         bool   `xorm:"INDEX(IDX_tag_fund_uid_deleted_order) NOT NULL"`
 	Name            string `xorm:"VARCHAR(64) NOT NULL"`
-	DisplayOrder    int32  `xorm:"INDEX(IDX_tag_uid_deleted_order) NOT NULL"`
+	DisplayOrder    int32  `xorm:"INDEX(IDX_tag_fund_uid_deleted_order) NOT NULL"`
 	Hidden          bool   `xorm:"NOT NULL"`
 	CreatedUnixTime int64
 	UpdatedUnixTime int64
@@ -69,6 +70,7 @@ type TransactionTagInfoResponse struct {
 func (t *TransactionTag) FillFromOtherTag(tag *TransactionTag) {
 	t.TagId = tag.TagId
 	t.Uid = tag.Uid
+	t.FundId = tag.FundId
 	t.Deleted = tag.Deleted
 	t.Name = tag.Name
 	t.DisplayOrder = tag.DisplayOrder

@@ -26,6 +26,7 @@ export class Transaction implements TransactionInfoResponse {
     public tagIds: string[];
     public comment: string;
     public editable: boolean;
+    public memberIds: string[]; // Fund member IDs
 
     private _pictures?: TransactionPicture[];
     private _geoLocation?: TransactionGeoLocation;
@@ -39,7 +40,7 @@ export class Transaction implements TransactionInfoResponse {
     private _gregorianCalendarDayOfMonth?: number = undefined; // only for displaying transaction in transaction list
     private _displayDayOfWeek?: WeekDay = undefined; // only for displaying transaction in transaction list
 
-    protected constructor(id: string, timeSequenceId: string, type: number, categoryId: string, time: number, timeZone: string | undefined, utcOffset: number, sourceAccountId: string, destinationAccountId: string, sourceAmount: number, destinationAmount: number, hideAmount: boolean, tagIds: string[], comment: string, editable: boolean) {
+    protected constructor(id: string, timeSequenceId: string, type: number, categoryId: string, time: number, timeZone: string | undefined, utcOffset: number, sourceAccountId: string, destinationAccountId: string, sourceAmount: number, destinationAmount: number, hideAmount: boolean, tagIds: string[], comment: string, editable: boolean, memberIds: string[] = []) {
         this.id = id;
         this.timeSequenceId = timeSequenceId;
         this.type = type;
@@ -54,6 +55,7 @@ export class Transaction implements TransactionInfoResponse {
         this.tagIds = tagIds;
         this.comment = comment;
         this.editable = editable;
+        this.memberIds = memberIds;
         this.setCategoryId(categoryId);
     }
 
@@ -241,6 +243,7 @@ export class Transaction implements TransactionInfoResponse {
             pictureIds: this.getPictureIds(),
             comment: this.comment,
             geoLocation: this.getNormalizedGeoLocation(),
+            memberIds: this.memberIds,
             clientSessionId: clientSessionId
         };
     }
@@ -265,7 +268,8 @@ export class Transaction implements TransactionInfoResponse {
             tagIds: this.tagIds,
             pictureIds: this.getPictureIds(),
             comment: this.comment,
-            geoLocation: this.getNormalizedGeoLocation()
+            geoLocation: this.getNormalizedGeoLocation(),
+            memberIds: this.memberIds
         };
     }
 
@@ -306,7 +310,8 @@ export class Transaction implements TransactionInfoResponse {
             false, // hideAmount
             [], // tagIds
             '', // comment
-            true // editable
+            true, // editable
+            [] // memberIds
         );
     }
 
@@ -326,7 +331,8 @@ export class Transaction implements TransactionInfoResponse {
             transactionResponse.hideAmount,
             transactionResponse.tagIds,
             transactionResponse.comment,
-            transactionResponse.editable
+            transactionResponse.editable,
+            transactionResponse.memberIds || []
         );
 
         if (transactionResponse.category) {
@@ -398,7 +404,8 @@ export class Transaction implements TransactionInfoResponse {
             transactionDraft.hideAmount ?? false, // hideAmount
             transactionDraft.tagIds ?? [], // tagIds
             transactionDraft.comment ?? '', // comment
-            true // editable
+            true, // editable
+            [] // memberIds (empty for draft transactions)
         );
 
         if (transactionDraft.pictures) {
@@ -469,6 +476,7 @@ export interface TransactionCreateRequest {
     readonly pictureIds: string[];
     readonly comment: string;
     readonly geoLocation?: TransactionGeoLocationRequest;
+    readonly memberIds?: string[]; // Fund member IDs
     readonly clientSessionId: string;
 }
 
@@ -486,6 +494,7 @@ export interface TransactionModifyRequest {
     readonly pictureIds: string[];
     readonly comment: string;
     readonly geoLocation?: TransactionGeoLocationRequest;
+    readonly memberIds?: string[]; // Fund member IDs
 }
 
 export interface TransactionMoveBetweenAccountsRequest {
@@ -515,6 +524,7 @@ export interface TransactionListByMaxTimeRequest {
     readonly tagFilterType: number;
     readonly amountFilter: string;
     readonly keyword: string;
+    readonly fundId?: string;
 }
 
 export interface TransactionListInMonthByPageRequest {
@@ -527,12 +537,14 @@ export interface TransactionListInMonthByPageRequest {
     readonly tagFilterType: number;
     readonly amountFilter: string;
     readonly keyword: string;
+    readonly fundId?: string;
 }
 
 export interface TransactionReconciliationStatementRequest {
     readonly accountId: string;
     readonly startTime: number;
     readonly endTime: number;
+    readonly fundId?: string;
 }
 
 export type TransactionGeoLocationResponse = Coordinate;
@@ -557,6 +569,7 @@ export interface TransactionInfoResponse {
     readonly pictures?: TransactionPictureInfoBasicResponse[];
     readonly comment: string;
     readonly geoLocation?: TransactionGeoLocationResponse;
+    readonly memberIds?: string[]; // Fund member IDs
     readonly editable: boolean;
 }
 
@@ -567,6 +580,7 @@ export interface TransactionStatisticRequest {
     readonly tagFilterType: number;
     readonly keyword: string;
     readonly useTransactionTimezone: boolean;
+    readonly fundId?: string;
 }
 
 export interface YearMonthRangeRequest {
@@ -579,6 +593,7 @@ export interface TransactionStatisticTrendsRequest extends YearMonthRangeRequest
     readonly tagFilterType: number;
     readonly keyword: string;
     readonly useTransactionTimezone: boolean;
+    readonly fundId?: string;
 }
 
 export const ALL_TRANSACTION_AMOUNTS_REQUEST_TYPE = [

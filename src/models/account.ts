@@ -154,7 +154,7 @@ export class Account implements AccountInfoResponse {
         }
     }
 
-    public toCreateRequest(clientSessionId: string, subAccounts?: Account[], parentAccount?: Account): AccountCreateRequest {
+    public toCreateRequest(clientSessionId: string, subAccounts?: Account[], parentAccount?: Account, fundId?: string): AccountCreateRequest {
         let subAccountCreateRequests: AccountCreateRequest[] | undefined = undefined;
 
         if (this.type === AccountType.MultiSubAccounts.type) {
@@ -166,7 +166,7 @@ export class Account implements AccountInfoResponse {
 
             if (subAccounts) {
                 for (const subAccount of subAccounts) {
-                    subAccountCreateRequests.push(subAccount.toCreateRequest(clientSessionId, undefined, this));
+                    subAccountCreateRequests.push(subAccount.toCreateRequest(clientSessionId, undefined, this, fundId));
                 }
             }
         }
@@ -183,11 +183,12 @@ export class Account implements AccountInfoResponse {
             comment: this.comment,
             creditCardStatementDate: !parentAccount && this.category === AccountCategory.CreditCard.type ? this.creditCardStatementDate : undefined,
             subAccounts: !parentAccount ? subAccountCreateRequests : undefined,
+            fundId: !parentAccount ? fundId : undefined,
             clientSessionId: !parentAccount ? clientSessionId : undefined
         };
     }
 
-    public toModifyRequest(clientSessionId: string, subAccounts?: Account[], parentAccount?: Account): AccountModifyRequest {
+    public toModifyRequest(clientSessionId: string, subAccounts?: Account[], parentAccount?: Account, fundId?: string): AccountModifyRequest {
         let subAccountModifyRequests: AccountModifyRequest[] | undefined = undefined;
 
         if (this.type === AccountType.MultiSubAccounts.type) {
@@ -199,7 +200,7 @@ export class Account implements AccountInfoResponse {
 
             if (subAccounts) {
                 for (const subAccount of subAccounts) {
-                    subAccountModifyRequests.push(subAccount.toModifyRequest(clientSessionId, undefined, this));
+                    subAccountModifyRequests.push(subAccount.toModifyRequest(clientSessionId, undefined, this, fundId));
                 }
             }
         }
@@ -217,6 +218,7 @@ export class Account implements AccountInfoResponse {
             creditCardStatementDate: !parentAccount && this.category === AccountCategory.CreditCard.type ? this.creditCardStatementDate : undefined,
             hidden: !this.visible,
             subAccounts: !parentAccount ? subAccountModifyRequests : undefined,
+            fundId: !parentAccount ? fundId : undefined,
             clientSessionId: !parentAccount ? clientSessionId : undefined
         };
     }
@@ -563,6 +565,7 @@ export interface AccountCreateRequest {
     readonly comment: string;
     readonly creditCardStatementDate?: number;
     readonly subAccounts?: AccountCreateRequest[];
+    readonly fundId?: string;
     readonly clientSessionId?: string;
 }
 
@@ -579,6 +582,7 @@ export interface AccountModifyRequest {
     readonly creditCardStatementDate?: number;
     readonly hidden: boolean;
     readonly subAccounts?: AccountModifyRequest[];
+    readonly fundId?: string;
     readonly clientSessionId?: string;
 }
 

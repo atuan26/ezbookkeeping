@@ -35,32 +35,44 @@ var (
 )
 
 // GetTotalTagCountByUid returns total tag count of user
-func (s *TransactionTagService) GetTotalTagCountByUid(c core.Context, uid int64) (int64, error) {
+func (s *TransactionTagService) GetTotalTagCountByUid(c core.Context, uid int64, fundId int64) (int64, error) {
 	if uid <= 0 {
 		return 0, errs.ErrUserIdInvalid
 	}
 
-	count, err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).Count(&models.TransactionTag{})
+	if fundId <= 0 {
+		return 0, errs.ErrFundIdInvalid
+	}
+
+	count, err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Count(&models.TransactionTag{})
 
 	return count, err
 }
 
 // GetAllTagsByUid returns all transaction tag models of user
-func (s *TransactionTagService) GetAllTagsByUid(c core.Context, uid int64) ([]*models.TransactionTag, error) {
+func (s *TransactionTagService) GetAllTagsByUid(c core.Context, uid int64, fundId int64) ([]*models.TransactionTag, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
 	}
 
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
+	}
+
 	var tags []*models.TransactionTag
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).Find(&tags)
+	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Find(&tags)
 
 	return tags, err
 }
 
 // GetTagByTagId returns a transaction tag model according to transaction tag id
-func (s *TransactionTagService) GetTagByTagId(c core.Context, uid int64, tagId int64) (*models.TransactionTag, error) {
+func (s *TransactionTagService) GetTagByTagId(c core.Context, uid int64, fundId int64, tagId int64) (*models.TransactionTag, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if tagId <= 0 {
@@ -68,7 +80,7 @@ func (s *TransactionTagService) GetTagByTagId(c core.Context, uid int64, tagId i
 	}
 
 	tag := &models.TransactionTag{}
-	has, err := s.UserDataDB(uid).NewSession(c).ID(tagId).Where("uid=? AND deleted=?", uid, false).Get(tag)
+	has, err := s.UserDataDB(uid).NewSession(c).ID(tagId).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Get(tag)
 
 	if err != nil {
 		return nil, err
@@ -80,9 +92,13 @@ func (s *TransactionTagService) GetTagByTagId(c core.Context, uid int64, tagId i
 }
 
 // GetTagsByTagIds returns transaction tag models according to transaction tag ids
-func (s *TransactionTagService) GetTagsByTagIds(c core.Context, uid int64, tagIds []int64) (map[int64]*models.TransactionTag, error) {
+func (s *TransactionTagService) GetTagsByTagIds(c core.Context, uid int64, fundId int64, tagIds []int64) (map[int64]*models.TransactionTag, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if tagIds == nil {
@@ -90,7 +106,7 @@ func (s *TransactionTagService) GetTagsByTagIds(c core.Context, uid int64, tagId
 	}
 
 	var tags []*models.TransactionTag
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).In("tag_id", tagIds).Find(&tags)
+	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("tag_id", tagIds).Find(&tags)
 
 	if err != nil {
 		return nil, err
@@ -101,13 +117,17 @@ func (s *TransactionTagService) GetTagsByTagIds(c core.Context, uid int64, tagId
 }
 
 // GetMaxDisplayOrder returns the max display order
-func (s *TransactionTagService) GetMaxDisplayOrder(c core.Context, uid int64) (int32, error) {
+func (s *TransactionTagService) GetMaxDisplayOrder(c core.Context, uid int64, fundId int64) (int32, error) {
 	if uid <= 0 {
 		return 0, errs.ErrUserIdInvalid
 	}
 
+	if fundId <= 0 {
+		return 0, errs.ErrFundIdInvalid
+	}
+
 	tag := &models.TransactionTag{}
-	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "deleted", "display_order").Where("uid=? AND deleted=?", uid, false).OrderBy("display_order desc").Limit(1).Get(tag)
+	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "fund_id", "deleted", "display_order").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).OrderBy("display_order desc").Limit(1).Get(tag)
 
 	if err != nil {
 		return 0, err
@@ -121,14 +141,19 @@ func (s *TransactionTagService) GetMaxDisplayOrder(c core.Context, uid int64) (i
 }
 
 // GetAllTagIdsOfAllTransactions returns all transaction tag ids
-func (s *TransactionTagService) GetAllTagIdsOfAllTransactions(c core.Context, uid int64) ([]*models.TransactionTagIndex, error) {
+func (s *TransactionTagService) GetAllTagIdsOfAllTransactions(c core.Context, uid int64, fundId int64) ([]*models.TransactionTagIndex, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
 	}
 
-	condition := "uid=? AND deleted=?"
-	conditionParams := make([]any, 0, 2)
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
+	}
+
+	condition := "uid=? AND fund_id=? AND deleted=?"
+	conditionParams := make([]any, 0, 3)
 	conditionParams = append(conditionParams, uid)
+	conditionParams = append(conditionParams, fundId)
 	conditionParams = append(conditionParams, false)
 
 	var allTransactionTagIndexes []*models.TransactionTagIndex
@@ -139,7 +164,7 @@ func (s *TransactionTagService) GetAllTagIdsOfAllTransactions(c core.Context, ui
 		var tagIndexes []*models.TransactionTagIndex
 
 		finalCondition := condition
-		finalConditionParams := make([]any, 0, 3)
+		finalConditionParams := make([]any, 0, 4)
 		finalConditionParams = append(finalConditionParams, conditionParams...)
 
 		if maxTransactionTagIndexId > 0 {
@@ -167,8 +192,8 @@ func (s *TransactionTagService) GetAllTagIdsOfAllTransactions(c core.Context, ui
 }
 
 // GetAllTagIdsMapOfAllTransactions returns all transaction tag ids map grouped by transaction id
-func (s *TransactionTagService) GetAllTagIdsMapOfAllTransactions(c core.Context, uid int64) (map[int64][]int64, error) {
-	tagIndexes, err := s.GetAllTagIdsOfAllTransactions(c, uid)
+func (s *TransactionTagService) GetAllTagIdsMapOfAllTransactions(c core.Context, uid int64, fundId int64) (map[int64][]int64, error) {
+	tagIndexes, err := s.GetAllTagIdsOfAllTransactions(c, uid, fundId)
 
 	if err != nil {
 		return nil, err
@@ -180,13 +205,17 @@ func (s *TransactionTagService) GetAllTagIdsMapOfAllTransactions(c core.Context,
 }
 
 // GetAllTagIdsOfTransactions returns transaction tag ids for given transactions
-func (s *TransactionTagService) GetAllTagIdsOfTransactions(c core.Context, uid int64, transactionIds []int64) (map[int64][]int64, error) {
+func (s *TransactionTagService) GetAllTagIdsOfTransactions(c core.Context, uid int64, fundId int64, transactionIds []int64) (map[int64][]int64, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
 	}
 
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
+	}
+
 	var tagIndexes []*models.TransactionTagIndex
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).In("transaction_id", transactionIds).OrderBy("transaction_id asc, tag_index_id asc").Find(&tagIndexes)
+	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("transaction_id", transactionIds).OrderBy("transaction_id asc, tag_index_id asc").Find(&tagIndexes)
 
 	allTransactionTagIds := s.GetGroupedTransactionTagIds(tagIndexes)
 
@@ -199,7 +228,11 @@ func (s *TransactionTagService) CreateTag(c core.Context, tag *models.Transactio
 		return errs.ErrUserIdInvalid
 	}
 
-	exists, err := s.ExistsTagName(c, tag.Uid, tag.Name)
+	if tag.FundId <= 0 {
+		return errs.ErrFundIdInvalid
+	}
+
+	exists, err := s.ExistsTagName(c, tag.Uid, tag.FundId, tag.Name)
 
 	if err != nil {
 		return err
@@ -224,9 +257,13 @@ func (s *TransactionTagService) CreateTag(c core.Context, tag *models.Transactio
 }
 
 // CreateTags saves a few transaction tag models to database
-func (s *TransactionTagService) CreateTags(c core.Context, uid int64, tags []*models.TransactionTag, skipExists bool) error {
+func (s *TransactionTagService) CreateTags(c core.Context, uid int64, fundId int64, tags []*models.TransactionTag, skipExists bool) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	allTagNames := make([]string, len(tags))
@@ -236,7 +273,7 @@ func (s *TransactionTagService) CreateTags(c core.Context, uid int64, tags []*mo
 	}
 
 	var existTags []*models.TransactionTag
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).In("name", allTagNames).Find(&existTags)
+	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("name", allTagNames).Find(&existTags)
 
 	if err != nil {
 		return err
@@ -274,6 +311,8 @@ func (s *TransactionTagService) CreateTags(c core.Context, uid int64, tags []*mo
 	for i := 0; i < len(newTags); i++ {
 		tag := newTags[i]
 		tag.TagId = tagUuids[i]
+		tag.Uid = uid
+		tag.FundId = fundId
 		tag.Deleted = false
 		tag.CreatedUnixTime = time.Now().Unix()
 		tag.UpdatedUnixTime = time.Now().Unix()
@@ -299,7 +338,11 @@ func (s *TransactionTagService) ModifyTag(c core.Context, tag *models.Transactio
 		return errs.ErrUserIdInvalid
 	}
 
-	exists, err := s.ExistsTagName(c, tag.Uid, tag.Name)
+	if tag.FundId <= 0 {
+		return errs.ErrFundIdInvalid
+	}
+
+	exists, err := s.ExistsTagName(c, tag.Uid, tag.FundId, tag.Name)
 
 	if err != nil {
 		return err
@@ -310,7 +353,7 @@ func (s *TransactionTagService) ModifyTag(c core.Context, tag *models.Transactio
 	tag.UpdatedUnixTime = time.Now().Unix()
 
 	return s.UserDataDB(tag.Uid).DoTransaction(c, func(sess *xorm.Session) error {
-		updatedRows, err := sess.ID(tag.TagId).Cols("name", "updated_unix_time").Where("uid=? AND deleted=?", tag.Uid, false).Update(tag)
+		updatedRows, err := sess.ID(tag.TagId).Cols("name", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", tag.Uid, tag.FundId, false).Update(tag)
 
 		if err != nil {
 			return err
@@ -323,9 +366,13 @@ func (s *TransactionTagService) ModifyTag(c core.Context, tag *models.Transactio
 }
 
 // HideTag updates hidden field of given transaction tags
-func (s *TransactionTagService) HideTag(c core.Context, uid int64, ids []int64, hidden bool) error {
+func (s *TransactionTagService) HideTag(c core.Context, uid int64, fundId int64, ids []int64, hidden bool) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	now := time.Now().Unix()
@@ -336,7 +383,7 @@ func (s *TransactionTagService) HideTag(c core.Context, uid int64, ids []int64, 
 	}
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
-		updatedRows, err := sess.Cols("hidden", "updated_unix_time").Where("uid=? AND deleted=?", uid, false).In("tag_id", ids).Update(updateModel)
+		updatedRows, err := sess.Cols("hidden", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("tag_id", ids).Update(updateModel)
 
 		if err != nil {
 			return err
@@ -349,9 +396,13 @@ func (s *TransactionTagService) HideTag(c core.Context, uid int64, ids []int64, 
 }
 
 // ModifyTagDisplayOrders updates display order of given transaction tags
-func (s *TransactionTagService) ModifyTagDisplayOrders(c core.Context, uid int64, tags []*models.TransactionTag) error {
+func (s *TransactionTagService) ModifyTagDisplayOrders(c core.Context, uid int64, fundId int64, tags []*models.TransactionTag) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	for i := 0; i < len(tags); i++ {
@@ -361,7 +412,7 @@ func (s *TransactionTagService) ModifyTagDisplayOrders(c core.Context, uid int64
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
 		for i := 0; i < len(tags); i++ {
 			tag := tags[i]
-			updatedRows, err := sess.ID(tag.TagId).Cols("display_order", "updated_unix_time").Where("uid=? AND deleted=?", uid, false).Update(tag)
+			updatedRows, err := sess.ID(tag.TagId).Cols("display_order", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Update(tag)
 
 			if err != nil {
 				return err
@@ -375,9 +426,13 @@ func (s *TransactionTagService) ModifyTagDisplayOrders(c core.Context, uid int64
 }
 
 // DeleteTag deletes an existed transaction tag from database
-func (s *TransactionTagService) DeleteTag(c core.Context, uid int64, tagId int64) error {
+func (s *TransactionTagService) DeleteTag(c core.Context, uid int64, fundId int64, tagId int64) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	now := time.Now().Unix()
@@ -388,7 +443,7 @@ func (s *TransactionTagService) DeleteTag(c core.Context, uid int64, tagId int64
 	}
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
-		exists, err := sess.Cols("uid", "tag_id").Where("uid=? AND deleted=? AND tag_id=?", uid, false, tagId).Limit(1).Exist(&models.TransactionTagIndex{})
+		exists, err := sess.Cols("uid", "fund_id", "tag_id").Where("uid=? AND fund_id=? AND deleted=? AND tag_id=?", uid, fundId, false, tagId).Limit(1).Exist(&models.TransactionTagIndex{})
 
 		if err != nil {
 			return err
@@ -397,7 +452,7 @@ func (s *TransactionTagService) DeleteTag(c core.Context, uid int64, tagId int64
 		}
 
 		var relatedTransactionTemplatesByTag []*models.TransactionTemplate
-		err = sess.Cols("uid", "deleted", "tag_ids", "template_type", "scheduled_frequency_type", "scheduled_end_time").Where("uid=? AND deleted=? AND (template_type=? OR (template_type=? AND scheduled_frequency_type<>? AND (scheduled_end_time IS NULL OR scheduled_end_time>=?))) AND tag_ids LIKE ?", uid, false, models.TRANSACTION_TEMPLATE_TYPE_NORMAL, models.TRANSACTION_TEMPLATE_TYPE_SCHEDULE, models.TRANSACTION_SCHEDULE_FREQUENCY_TYPE_DISABLED, now, "%%"+utils.Int64ToString(tagId)+"%%").Find(&relatedTransactionTemplatesByTag)
+		err = sess.Cols("uid", "fund_id", "deleted", "tag_ids", "template_type", "scheduled_frequency_type", "scheduled_end_time").Where("uid=? AND fund_id=? AND deleted=? AND (template_type=? OR (template_type=? AND scheduled_frequency_type<>? AND (scheduled_end_time IS NULL OR scheduled_end_time>=?))) AND tag_ids LIKE ?", uid, fundId, false, models.TRANSACTION_TEMPLATE_TYPE_NORMAL, models.TRANSACTION_TEMPLATE_TYPE_SCHEDULE, models.TRANSACTION_SCHEDULE_FREQUENCY_TYPE_DISABLED, now, "%%"+utils.Int64ToString(tagId)+"%%").Find(&relatedTransactionTemplatesByTag)
 
 		if err != nil {
 			return err
@@ -418,7 +473,7 @@ func (s *TransactionTagService) DeleteTag(c core.Context, uid int64, tagId int64
 			}
 		}
 
-		deletedRows, err := sess.ID(tagId).Cols("deleted", "deleted_unix_time").Where("uid=? AND deleted=?", uid, false).Update(updateModel)
+		deletedRows, err := sess.ID(tagId).Cols("deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Update(updateModel)
 
 		if err != nil {
 			return err
@@ -431,9 +486,13 @@ func (s *TransactionTagService) DeleteTag(c core.Context, uid int64, tagId int64
 }
 
 // DeleteAllTags deletes all existed transaction tags from database
-func (s *TransactionTagService) DeleteAllTags(c core.Context, uid int64) error {
+func (s *TransactionTagService) DeleteAllTags(c core.Context, uid int64, fundId int64) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	now := time.Now().Unix()
@@ -444,7 +503,7 @@ func (s *TransactionTagService) DeleteAllTags(c core.Context, uid int64) error {
 	}
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
-		exists, err := sess.Cols("uid", "deleted").Where("uid=? AND deleted=?", uid, false).Limit(1).Exist(&models.TransactionTagIndex{})
+		exists, err := sess.Cols("uid", "fund_id", "deleted").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Limit(1).Exist(&models.TransactionTagIndex{})
 
 		if err != nil {
 			return err
@@ -452,7 +511,7 @@ func (s *TransactionTagService) DeleteAllTags(c core.Context, uid int64) error {
 			return errs.ErrTransactionTagInUseCannotBeDeleted
 		}
 
-		_, err = sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND deleted=?", uid, false).Update(updateModel)
+		_, err = sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Update(updateModel)
 
 		if err != nil {
 			return err
@@ -463,18 +522,22 @@ func (s *TransactionTagService) DeleteAllTags(c core.Context, uid int64) error {
 }
 
 // ExistsTagName returns whether the given tag name exists
-func (s *TransactionTagService) ExistsTagName(c core.Context, uid int64, name string) (bool, error) {
+func (s *TransactionTagService) ExistsTagName(c core.Context, uid int64, fundId int64, name string) (bool, error) {
 	if name == "" {
 		return false, errs.ErrTransactionTagNameIsEmpty
 	}
 
-	return s.UserDataDB(uid).NewSession(c).Cols("name").Where("uid=? AND deleted=? AND name=?", uid, false, name).Exist(&models.TransactionTag{})
+	return s.UserDataDB(uid).NewSession(c).Cols("name").Where("uid=? AND fund_id=? AND deleted=? AND name=?", uid, fundId, false, name).Exist(&models.TransactionTag{})
 }
 
 // ModifyTagIndexTransactionTime updates transaction time of given transaction tag indexes
-func (s *TransactionTagService) ModifyTagIndexTransactionTime(c core.Context, uid int64, tagIndexes []*models.TransactionTagIndex) error {
+func (s *TransactionTagService) ModifyTagIndexTransactionTime(c core.Context, uid int64, fundId int64, tagIndexes []*models.TransactionTagIndex) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	for i := 0; i < len(tagIndexes); i++ {
@@ -484,7 +547,7 @@ func (s *TransactionTagService) ModifyTagIndexTransactionTime(c core.Context, ui
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
 		for i := 0; i < len(tagIndexes); i++ {
 			tagIndex := tagIndexes[i]
-			updatedRows, err := sess.ID(tagIndex.TagIndexId).Cols("transaction_time", "updated_unix_time").Where("uid=? AND deleted=?", uid, false).Update(tagIndex)
+			updatedRows, err := sess.ID(tagIndex.TagIndexId).Cols("transaction_time", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Update(tagIndex)
 
 			if err != nil {
 				return err
