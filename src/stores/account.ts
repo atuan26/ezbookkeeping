@@ -2,7 +2,7 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 
 import { useSettingsStore } from './setting.ts';
-import { useUserStore } from './user.ts';
+import { useFundsStore } from './fund.ts';
 import { useExchangeRatesStore } from './exchangeRates.ts';
 
 import { type BeforeResolveFunction, itemAndIndex, reversed, entries, values } from '@/core/base.ts';
@@ -25,7 +25,7 @@ import logger from '@/lib/logger.ts';
 
 export const useAccountsStore = defineStore('accounts', () => {
     const settingsStore = useSettingsStore();
-    const userStore = useUserStore();
+    const fundsStore = useFundsStore();
     const exchangeRatesStore = useExchangeRatesStore();
 
     const allAccounts = ref<Account[]>([]);
@@ -464,10 +464,10 @@ export const useAccountsStore = defineStore('accounts', () => {
         let hasUnCalculatedAmount = false;
 
         for (const accountBalance of accountsBalance) {
-            if (accountBalance.currency === userStore.currentUserDefaultCurrency) {
+            if (accountBalance.currency === fundsStore.currentCurrency) {
                 netAssets += accountBalance.balance;
             } else {
-                const balance = exchangeRatesStore.getExchangedAmount(accountBalance.balance, accountBalance.currency, userStore.currentUserDefaultCurrency);
+                const balance = exchangeRatesStore.getExchangedAmount(accountBalance.balance, accountBalance.currency, fundsStore.currentCurrency);
 
                 if (!isNumber(balance)) {
                     hasUnCalculatedAmount = true;
@@ -500,10 +500,10 @@ export const useAccountsStore = defineStore('accounts', () => {
         let hasUnCalculatedAmount = false;
 
         for (const accountBalance of accountsBalance) {
-            if (accountBalance.currency === userStore.currentUserDefaultCurrency) {
+            if (accountBalance.currency === fundsStore.currentCurrency) {
                 totalAssets += accountBalance.balance;
             } else {
-                const balance = exchangeRatesStore.getExchangedAmount(accountBalance.balance, accountBalance.currency, userStore.currentUserDefaultCurrency);
+                const balance = exchangeRatesStore.getExchangedAmount(accountBalance.balance, accountBalance.currency, fundsStore.currentCurrency);
 
                 if (!isNumber(balance)) {
                     hasUnCalculatedAmount = true;
@@ -536,10 +536,10 @@ export const useAccountsStore = defineStore('accounts', () => {
         let hasUnCalculatedAmount = false;
 
         for (const accountBalance of accountsBalance) {
-            if (accountBalance.currency === userStore.currentUserDefaultCurrency) {
+            if (accountBalance.currency === fundsStore.currentCurrency) {
                 totalLiabilities -= accountBalance.balance;
             } else {
-                const balance = exchangeRatesStore.getExchangedAmount(accountBalance.balance, accountBalance.currency, userStore.currentUserDefaultCurrency);
+                const balance = exchangeRatesStore.getExchangedAmount(accountBalance.balance, accountBalance.currency, fundsStore.currentCurrency);
 
                 if (!isNumber(balance)) {
                     hasUnCalculatedAmount = true;
@@ -570,7 +570,7 @@ export const useAccountsStore = defineStore('accounts', () => {
         let hasUnCalculatedAmount = false;
 
         for (const accountBalance of accountsBalance) {
-            if (accountBalance.currency === userStore.currentUserDefaultCurrency) {
+            if (accountBalance.currency === fundsStore.currentCurrency) {
                 if (accountBalance.isAsset) {
                     totalBalance += accountBalance.balance;
                 } else if (accountBalance.isLiability) {
@@ -579,7 +579,7 @@ export const useAccountsStore = defineStore('accounts', () => {
                     totalBalance += accountBalance.balance;
                 }
             } else {
-                const balance = exchangeRatesStore.getExchangedAmount(accountBalance.balance, accountBalance.currency, userStore.currentUserDefaultCurrency);
+                const balance = exchangeRatesStore.getExchangedAmount(accountBalance.balance, accountBalance.currency, fundsStore.currentCurrency);
 
                 if (!isNumber(balance)) {
                     hasUnCalculatedAmount = true;
@@ -629,7 +629,7 @@ export const useAccountsStore = defineStore('accounts', () => {
             return null;
         }
 
-        let resultCurrency = userStore.currentUserDefaultCurrency;
+        let resultCurrency = fundsStore.currentCurrency;
 
         if (!account.subAccounts || !account.subAccounts.length) {
             return {
@@ -761,9 +761,11 @@ export const useAccountsStore = defineStore('accounts', () => {
         }
 
         return new Promise((resolve, reject) => {
-            services.getAllAccounts({
-                visibleOnly: false
-            }).then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                services.getAllAccounts({
+                    visibleOnly: false,
+                    fundId: fundId || undefined
+                }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -800,14 +802,19 @@ export const useAccountsStore = defineStore('accounts', () => {
                     reject(error);
                 }
             });
+            }).catch(error => {
+                reject(error);
+            });
         });
     }
 
     function getAccount({ accountId }: { accountId: string }): Promise<Account> {
         return new Promise((resolve, reject) => {
-            services.getAccount({
-                id: accountId
-            }).then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                services.getAccount({
+                    id: accountId,
+                    fundId: fundId || undefined
+                }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -829,19 +836,23 @@ export const useAccountsStore = defineStore('accounts', () => {
                     reject(error);
                 }
             });
+            }).catch(error => {
+                reject(error);
+            });
         });
     }
 
     function saveAccount({ account, subAccounts, isEdit, clientSessionId }: { account: Account, subAccounts: Account[], isEdit: boolean, clientSessionId: string }): Promise<Account> {
         return new Promise((resolve, reject) => {
-            const oldAccount = isEdit ? allAccountsMap.value[account.id] : null;
-            let promise = null;
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                const oldAccount = isEdit ? allAccountsMap.value[account.id] : null;
+                let promise = null;
 
-            if (!isEdit) {
-                promise = services.addAccount(account.toCreateRequest(clientSessionId, subAccounts));
-            } else {
-                promise = services.modifyAccount(account.toModifyRequest(clientSessionId, subAccounts));
-            }
+                if (!isEdit) {
+                    promise = services.addAccount(account.toCreateRequest(clientSessionId, subAccounts, undefined, fundId || undefined), fundId || undefined);
+                } else {
+                    promise = services.modifyAccount(account.toModifyRequest(clientSessionId, subAccounts, undefined, fundId || undefined), fundId || undefined);
+                }
 
             promise.then(response => {
                 const data = response.data;
@@ -883,6 +894,9 @@ export const useAccountsStore = defineStore('accounts', () => {
                     reject(error);
                 }
             });
+            }).catch(error => {
+                reject(error);
+            });
         });
     }
 
@@ -921,8 +935,10 @@ export const useAccountsStore = defineStore('accounts', () => {
         }
 
         return new Promise((resolve, reject) => {
-            services.moveAccount({
-                newDisplayOrders: newDisplayOrders
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.moveAccount({
+                    newDisplayOrders: newDisplayOrders
+                }, fundId || undefined);
             }).then(response => {
                 const data = response.data;
 
@@ -952,9 +968,11 @@ export const useAccountsStore = defineStore('accounts', () => {
 
     function hideAccount({ account, hidden }: { account: Account, hidden: boolean }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.hideAccount({
-                id: account.id,
-                hidden: hidden
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.hideAccount({
+                    id: account.id,
+                    hidden: hidden
+                }, fundId || undefined);
             }).then(response => {
                 const data = response.data;
 
@@ -991,8 +1009,10 @@ export const useAccountsStore = defineStore('accounts', () => {
 
     function deleteAccount({ account, beforeResolve }: { account: Account, beforeResolve?: BeforeResolveFunction }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.deleteAccount({
-                id: account.id
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.deleteAccount({
+                    id: account.id
+                }, fundId || undefined);
             }).then(response => {
                 const data = response.data;
 
@@ -1026,8 +1046,10 @@ export const useAccountsStore = defineStore('accounts', () => {
 
     function deleteSubAccount({ subAccount, beforeResolve }: { subAccount: Account, beforeResolve?: BeforeResolveFunction }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.deleteSubAccount({
-                id: subAccount.id
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.deleteSubAccount({
+                    id: subAccount.id
+                }, fundId || undefined);
             }).then(response => {
                 const data = response.data;
 

@@ -2,7 +2,6 @@ import { ref, computed } from 'vue';
 
 import { useI18n } from '@/locales/helpers.ts';
 
-import { useUserStore } from '@/stores/user.ts';
 import { useExchangeRatesStore } from '@/stores/exchangeRates.ts';
 
 import type {
@@ -12,17 +11,18 @@ import type {
 } from '@/models/exchange_rate.ts';
 
 import { getExchangedAmountByRate } from '@/lib/numeral.ts';
+import { useFundsStore } from '@/stores/fund';
 
 export function useExchangeRatesPageBase() {
     const { getAllDisplayExchangeRates, formatUnixTimeToLongDate, parseAmountFromWesternArabicNumerals } = useI18n();
 
-    const userStore = useUserStore();
+    const fundsStore = useFundsStore();
     const exchangeRatesStore = useExchangeRatesStore();
 
-    const baseCurrency = ref<string>(userStore.currentUserDefaultCurrency);
+    const baseCurrency = ref<string>(fundsStore.currentCurrency);
     const baseAmount = ref<number>(100);
 
-    const defaultCurrency = computed<string>(() => userStore.currentUserDefaultCurrency);
+    const defaultCurrency = computed<string>(() => fundsStore.currentCurrency);
     const exchangeRatesData = computed<LatestExchangeRateResponse | undefined>(() => exchangeRatesStore.latestExchangeRates.data);
     const isUserCustomExchangeRates = computed<boolean>(() => exchangeRatesStore.isUserCustomExchangeRates);
 

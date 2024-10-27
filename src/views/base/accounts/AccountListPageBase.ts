@@ -5,6 +5,7 @@ import { useI18n } from '@/locales/helpers.ts';
 import { useSettingsStore } from '@/stores/setting.ts';
 import { useUserStore } from '@/stores/user.ts';
 import { useAccountsStore } from '@/stores/account.ts';
+import { useFundsStore } from '@/stores/fund.ts';
 
 import type { HiddenAmount, NumberWithSuffix } from '@/core/numeral.ts';
 import type { WeekDayValue } from '@/core/datetime.ts';
@@ -19,6 +20,7 @@ export function useAccountListPageBase() {
     const settingsStore = useSettingsStore();
     const userStore = useUserStore();
     const accountsStore = useAccountsStore();
+    const fundsStore = useFundsStore();
 
     const loading = ref<boolean>(true);
     const showHidden = ref<boolean>(false);
@@ -31,7 +33,7 @@ export function useAccountListPageBase() {
 
     const firstDayOfWeek = computed<WeekDayValue>(() => userStore.currentUserFirstDayOfWeek);
     const fiscalYearStart = computed<number>(() => userStore.currentUserFiscalYearStart);
-    const defaultCurrency = computed<string>(() => userStore.currentUserDefaultCurrency);
+    const defaultCurrency = computed<string>(() => fundsStore.currentCurrency);
 
     const allAccounts = computed<Account[]>(() => accountsStore.allAccounts);
     const allCategorizedAccountsMap = computed<Record<number, CategorizedAccount>>(() => accountsStore.allCategorizedAccountsMap);

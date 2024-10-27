@@ -1,6 +1,8 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 
+import { useFundsStore } from './fund.ts';
+
 import { type BeforeResolveFunction, itemAndIndex, entries } from '@/core/base.ts';
 
 import { TransactionType } from '@/core/transaction.ts';
@@ -17,6 +19,8 @@ import logger from '@/lib/logger.ts';
 import services, { type ApiResponsePromise } from '@/lib/services.ts';
 
 export const useTransactionTemplatesStore = defineStore('transactionTemplates', () =>{
+    const fundsStore = useFundsStore();
+    
     const allTransactionTemplates = ref<Record<number, TransactionTemplate[]>>({});
     const allTransactionTemplatesMap = ref<Record<number, Record<string, TransactionTemplate>>>({});
     const transactionTemplateListStatesInvalid = ref<Record<number, boolean>>({});
@@ -155,7 +159,9 @@ export const useTransactionTemplatesStore = defineStore('transactionTemplates', 
         }
 
         return new Promise((resolve, reject) => {
-            services.getAllTransactionTemplates({ templateType }).then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.getAllTransactionTemplates({ templateType, fundId: fundId || undefined });
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -197,8 +203,11 @@ export const useTransactionTemplatesStore = defineStore('transactionTemplates', 
 
     function getTemplate({ templateId }: { templateId: string }): Promise<TransactionTemplate> {
         return new Promise((resolve, reject) => {
-            services.getTransactionTemplate({
-                id: templateId
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.getTransactionTemplate({
+                    id: templateId,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -235,13 +244,15 @@ export const useTransactionTemplatesStore = defineStore('transactionTemplates', 
                 return;
             }
 
-            if (!isEdit) {
-                promise = services.addTransactionTemplate(template.toTemplateCreateRequest(clientSessionId));
-            } else {
-                promise = services.modifyTransactionTemplate(template.toTemplateModifyRequest());
-            }
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                if (!isEdit) {
+                    promise = services.addTransactionTemplate({ ...template.toTemplateCreateRequest(clientSessionId), fundId: fundId || undefined });
+                } else {
+                    promise = services.modifyTransactionTemplate({ ...template.toTemplateModifyRequest(), fundId: fundId || undefined });
+                }
 
-            promise.then(response => {
+                return promise;
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -324,8 +335,11 @@ export const useTransactionTemplatesStore = defineStore('transactionTemplates', 
         }
 
         return new Promise((resolve, reject) => {
-            services.moveTransactionTemplate({
-                newDisplayOrders: newDisplayOrders
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.moveTransactionTemplate({
+                    newDisplayOrders: newDisplayOrders,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -355,9 +369,12 @@ export const useTransactionTemplatesStore = defineStore('transactionTemplates', 
 
     function hideTemplate({ template, hidden }: { template: TransactionTemplate, hidden: boolean }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.hideTransactionTemplate({
-                id: template.id,
-                hidden: hidden
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.hideTransactionTemplate({
+                    id: template.id,
+                    hidden: hidden,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -397,8 +414,11 @@ export const useTransactionTemplatesStore = defineStore('transactionTemplates', 
 
     function deleteTemplate({ template, beforeResolve }: { template: TransactionTemplate, beforeResolve?: BeforeResolveFunction }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.deleteTransactionTemplate({
-                id: template.id
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.deleteTransactionTemplate({
+                    id: template.id,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
