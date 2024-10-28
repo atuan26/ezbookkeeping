@@ -5,6 +5,7 @@ import { useI18n } from '@/locales/helpers.ts';
 import { useSettingsStore } from '@/stores/setting.ts';
 import { useUserStore } from '@/stores/user.ts';
 import { type TransactionStatisticsFilter, useStatisticsStore } from '@/stores/statistics.ts';
+import { useFundsStore } from '@/stores/fund.ts';
 
 import type { TypeAndDisplayName } from '@/core/base.ts';
 import { type LocalizedDateRange, type WeekDayValue, DateRangeScene, DateRange } from '@/core/datetime.ts';
@@ -38,13 +39,14 @@ export function useStatisticsTransactionPageBase() {
     const settingsStore = useSettingsStore();
     const userStore = useUserStore();
     const statisticsStore = useStatisticsStore();
+    const fundsStore = useFundsStore();
 
     const loading = ref<boolean>(true);
     const analysisType = ref<StatisticsAnalysisType>(StatisticsAnalysisType.CategoricalAnalysis);
     const trendDateAggregationType = ref<number>(ChartDateAggregationType.Default.type);
 
     const showAccountBalance = computed<boolean>(() => settingsStore.appSettings.showAccountBalance);
-    const defaultCurrency = computed<string>(() => userStore.currentUserDefaultCurrency);
+    const defaultCurrency = computed<string>(() => fundsStore.currentCurrency);
     const firstDayOfWeek = computed<WeekDayValue>(() => userStore.currentUserFirstDayOfWeek);
     const fiscalYearStart = computed<number>(() => userStore.currentUserFiscalYearStart);
 

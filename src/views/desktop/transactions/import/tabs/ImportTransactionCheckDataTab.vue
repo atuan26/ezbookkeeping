@@ -423,6 +423,7 @@ import {
     mdiShapePlusOutline,
     mdiTransfer
 } from '@mdi/js';
+import { useFundsStore } from '@/stores/fund';
 
 type SnackBarType = InstanceType<typeof SnackBar>;
 type BatchReplaceDialogType = InstanceType<typeof BatchReplaceDialog>;
@@ -467,6 +468,7 @@ const {
     getCategorizedAccountsWithDisplayBalance
 } = useI18n();
 
+const fundsStore = useFundsStore();
 const settingsStore = useSettingsStore();
 const userStore = useUserStore();
 const accountsStore = useAccountsStore();
@@ -500,7 +502,7 @@ const numeralSystem = computed<NumeralSystem>(() => getCurrentNumeralSystemType(
 const showAccountBalance = computed<boolean>(() => settingsStore.appSettings.showAccountBalance);
 const currentTimezoneOffsetMinutes = computed<number>(() => getTimezoneOffsetMinutes(settingsStore.appSettings.timeZone));
 
-const defaultCurrency = computed<string>(() => userStore.currentUserDefaultCurrency);
+const defaultCurrency = computed<string>(() => fundsStore.currentCurrency);
 const coordinateDisplayType = computed<number>(() => userStore.currentUserCoordinateDisplayType);
 
 const allAccounts = computed<Account[]>(() => accountsStore.allPlainAccounts);

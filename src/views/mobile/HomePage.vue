@@ -222,6 +222,7 @@ import { useAccountsStore } from '@/stores/account.ts';
 import { useTransactionCategoriesStore } from '@/stores/transactionCategory.ts';
 import { useTransactionTemplatesStore } from '@/stores/transactionTemplate.ts';
 import { useOverviewStore } from '@/stores/overview.ts';
+import { useFundsStore } from '@/stores/fund.ts';
 
 import { DateRange } from '@/core/datetime.ts';
 import { TemplateType } from '@/core/template.ts';
@@ -250,6 +251,7 @@ const accountsStore = useAccountsStore();
 const transactionCategoriesStore = useTransactionCategoriesStore();
 const transactionTemplatesStore = useTransactionTemplatesStore();
 const overviewStore = useOverviewStore();
+const fundsStore = useFundsStore();
 
 const loading = ref<boolean>(true);
 const showTransactionTemplatePopover = ref<boolean>(false);
@@ -270,14 +272,17 @@ function init(): void {
     if (isUserLogined() && isUserUnlocked()) {
         loading.value = true;
 
-        const promises = [
-            accountsStore.loadAllAccounts({ force: false }),
-            transactionCategoriesStore.loadAllCategories({ force: false }),
-            transactionTemplatesStore.loadAllTemplates({ templateType: TemplateType.Normal.type,  force: false }),
-            overviewStore.loadTransactionOverview({ force: false })
-        ];
+        // Ensure funds are loaded (will use cached data if already loaded)
+        fundsStore.ensureFundLoaded().then(() => {
+            const promises = [
+                accountsStore.loadAllAccounts({ force: false }),
+                transactionCategoriesStore.loadAllCategories({ force: false }),
+                transactionTemplatesStore.loadAllTemplates({ templateType: TemplateType.Normal.type,  force: false }),
+                overviewStore.loadTransactionOverview({ force: false })
+            ];
 
-        Promise.all(promises).then(() => {
+            return Promise.all(promises);
+        }).then(() => {
             loading.value = false;
         }).catch(error => {
             loading.value = false;

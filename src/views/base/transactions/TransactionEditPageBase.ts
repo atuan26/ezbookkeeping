@@ -7,6 +7,7 @@ import { useUserStore } from '@/stores/user.ts';
 import { useAccountsStore } from '@/stores/account.ts';
 import { useTransactionCategoriesStore } from '@/stores/transactionCategory.ts';
 import { useTransactionTagsStore } from '@/stores/transactionTag.ts';
+import { useFundsStore } from '@/stores/fund.ts';
 import { useTransactionsStore } from '@/stores/transaction.ts';
 import { useExchangeRatesStore } from '@/stores/exchangeRates.ts';
 
@@ -74,6 +75,7 @@ export function useTransactionEditPageBase(type: TransactionEditPageType, initMo
     const transactionTagsStore = useTransactionTagsStore();
     const transactionsStore = useTransactionsStore();
     const exchangeRatesStore = useExchangeRatesStore();
+    const fundsStore = useFundsStore();
 
     const isSupportGeoLocation: boolean = !!navigator.geolocation;
 
@@ -94,7 +96,7 @@ export function useTransactionEditPageBase(type: TransactionEditPageType, initMo
     const numeralSystem = computed<NumeralSystem>(() => getCurrentNumeralSystemType());
     const currentTimezoneOffsetMinutes = computed<number>(() => getTimezoneOffsetMinutes(settingsStore.appSettings.timeZone));
     const showAccountBalance = computed<boolean>(() => settingsStore.appSettings.showAccountBalance);
-    const defaultCurrency = computed<string>(() => userStore.currentUserDefaultCurrency);
+    const defaultCurrency = computed<string>(() => fundsStore.currentCurrency);
     const defaultAccountId = computed<string>(() => userStore.currentUserDefaultAccountId);
     const firstDayOfWeek = computed<WeekDayValue>(() => userStore.currentUserFirstDayOfWeek);
     const coordinateDisplayType = computed<number>(() => userStore.currentUserCoordinateDisplayType);

@@ -120,6 +120,11 @@
                             <h1 class="font-weight-medium text-xl">{{ tt('global.app.title') }}</h1>
                         </div>
                         <v-spacer />
+                        <FundSelectButton 
+                            class="me-3"
+                            @create-fund="showCreateFund = true"
+                            @manage-fund="onManageFund"
+                        />
                         <v-btn color="primary" variant="text" class="me-2"
                                :icon="true" @click="(currentTheme === 'light' ? currentTheme = 'dark' : (currentTheme === 'dark' ? currentTheme = 'auto' : currentTheme = 'light'))">
                             <v-icon :icon="(currentTheme === 'light' ? mdiWeatherSunny : (currentTheme === 'dark' ? mdiWeatherNight : mdiThemeLightDark))" size="24" />
@@ -194,22 +199,40 @@
         </v-overlay>
 
         <snack-bar ref="snackbar" />
+        
+        <!-- Fund Management Dialogs -->
+        <FundCreateDialog
+            v-model:show="showCreateFund"
+            @fund-saved="onFundSaved"
+            @error="onError"
+        />
+        
+        <FundManagementDialog
+            v-model:show="showManageFunds"
+            :fund-id="managingFundId"
+            @error="onError"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
 import SnackBar from '@/components/desktop/SnackBar.vue';
+import FundSelectButton from '@/components/desktop/FundSelectButton.vue';
+import FundCreateDialog from '@/components/desktop/FundCreateDialog.vue';
+import FundManagementDialog from '@/components/desktop/FundManagementDialog.vue';
 
-import { ref, computed, useTemplateRef } from 'vue';
+import { ref, computed, useTemplateRef, onMounted } from 'vue';
 
 import { useDisplay, useTheme } from 'vuetify';
 import { useRoute, useRouter } from 'vue-router';
 
 import { useI18n } from '@/locales/helpers.ts';
+import { useFundSwitching } from '@/composables/useFundSwitching.ts';
 
 import { useRootStore } from '@/stores/index.ts';
 import { useSettingsStore } from '@/stores/setting.ts';
 import { useUserStore } from '@/stores/user.ts';
+import { useFundsStore } from '@/stores/fund.ts';
 import { useDesktopPageStore } from '@/stores/desktopPage.ts';
 
 import { APPLICATION_LOGO_PATH } from '@/consts/asset.ts';
@@ -249,10 +272,12 @@ const route = useRoute();
 const router = useRouter();
 
 const { tt, initLocale } = useI18n();
+const { } = useFundSwitching(); // Initialize fund switching watcher
 
 const rootStore = useRootStore();
 const settingsStore = useSettingsStore();
 const userStore = useUserStore();
+const fundsStore = useFundsStore();
 const desktopPageStore = useDesktopPageStore();
 
 const snackbar = useTemplateRef<SnackBarType>('snackbar');
@@ -262,6 +287,9 @@ const isVerticalNavScrolled = ref<boolean>(false);
 const showVerticalOverlayMenu = ref<boolean>(false);
 const showLoading = ref<boolean>(false);
 const showMobileQrCode = ref<boolean>(false);
+const showCreateFund = ref<boolean>(false);
+const showManageFunds = ref<boolean>(false);
+const managingFundId = ref<string | null>(null);
 
 const mdAndDown = computed<boolean>(() => display.mdAndDown.value);
 const currentRoutePath = computed<string>(() => route.path);
@@ -327,6 +355,31 @@ function logout(): void {
 function showAddDialogInTransactionListPage(): void {
     desktopPageStore.setShowAddTransactionDialogInTransactionList();
 }
+
+function onFundSaved(): void {
+    // Refresh fund list
+    fundsStore.updateFundListInvalidState(true);
+    fundsStore.loadAllFunds({ force: false });
+}
+
+function onManageFund(fundId: string): void {
+    managingFundId.value = fundId;
+    showManageFunds.value = true;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function onError(error: any): void {
+    if (snackbar.value) {
+        snackbar.value.showMessage(error.message || 'An error occurred');
+    }
+}
+
+// Ensure funds are loaded on mount (will use cached data if already loaded by App)
+onMounted(() => {
+    fundsStore.ensureFundLoaded().catch((error) => {
+        console.error('Failed to ensure funds loaded:', error);
+    });
+});
 </script>
 
 <style>
