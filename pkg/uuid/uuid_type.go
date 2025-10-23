@@ -14,4 +14,6 @@ const (
 	UUID_TYPE_TAG_INDEX   UuidType = 6
 	UUID_TYPE_TEMPLATE    UuidType = 7
 	UUID_TYPE_PICTURE     UuidType = 8
+	UUID_TYPE_FUND        UuidType = 9
+	UUID_TYPE_FUND_MEMBER UuidType = 10
 )
