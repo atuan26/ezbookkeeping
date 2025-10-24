@@ -49,7 +49,12 @@ func (a *TransactionCategoriesApi) CategoryListHandler(c *core.WebContext) (any,
 	}
 
 	uid := c.GetCurrentUid()
-	categories, err := a.categories.GetAllCategoriesByUid(c, uid, categoryListReq.Type, categoryListReq.ParentId)
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	categories, err := a.categories.GetAllCategoriesByUid(c, uid, fundId, categoryListReq.Type, categoryListReq.ParentId)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_categories.CategoryListHandler] failed to get categories for user \"uid:%d\", because %s", uid, err.Error())
@@ -70,7 +75,14 @@ func (a *TransactionCategoriesApi) CategoryGetHandler(c *core.WebContext) (any, 
 	}
 
 	uid := c.GetCurrentUid()
-	category, err := a.categories.GetCategoryByCategoryId(c, uid, categoryGetReq.Id)
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	category, err := a.categories.GetCategoryByCategoryId(c, uid, fundId, categoryGetReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_categories.CategoryGetHandler] failed to get category \"id:%d\" for user \"uid:%d\", because %s", categoryGetReq.Id, uid, err.Error())
@@ -98,9 +110,14 @@ func (a *TransactionCategoriesApi) CategoryCreateHandler(c *core.WebContext) (an
 	}
 
 	uid := c.GetCurrentUid()
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
 
 	if categoryCreateReq.ParentId > 0 {
-		parentCategory, err := a.categories.GetCategoryByCategoryId(c, uid, categoryCreateReq.ParentId)
+		parentCategory, err := a.categories.GetCategoryByCategoryId(c, uid, fundId, categoryCreateReq.ParentId)
 
 		if err != nil {
 			log.Errorf(c, "[transaction_categories.CategoryCreateHandler] failed to get parent category \"id:%d\" for user \"uid:%d\", because %s", categoryCreateReq.ParentId, uid, err.Error())
@@ -121,9 +138,9 @@ func (a *TransactionCategoriesApi) CategoryCreateHandler(c *core.WebContext) (an
 	var maxOrderId int32
 
 	if categoryCreateReq.ParentId <= 0 {
-		maxOrderId, err = a.categories.GetMaxDisplayOrder(c, uid, categoryCreateReq.Type)
+		maxOrderId, err = a.categories.GetMaxDisplayOrder(c, uid, fundId, categoryCreateReq.Type)
 	} else {
-		maxOrderId, err = a.categories.GetMaxSubCategoryDisplayOrder(c, uid, categoryCreateReq.Type, categoryCreateReq.ParentId)
+		maxOrderId, err = a.categories.GetMaxSubCategoryDisplayOrder(c, uid, fundId, categoryCreateReq.Type, categoryCreateReq.ParentId)
 	}
 
 	if err != nil {
@@ -141,7 +158,7 @@ func (a *TransactionCategoriesApi) CategoryCreateHandler(c *core.WebContext) (an
 			categoryId, err := utils.StringToInt64(remark)
 
 			if err == nil {
-				category, err = a.categories.GetCategoryByCategoryId(c, uid, categoryId)
+				category, err = a.categories.GetCategoryByCategoryId(c, uid, fundId, categoryId)
 
 				if err != nil {
 					log.Errorf(c, "[transaction_categories.CategoryCreateHandler] failed to get existed category \"id:%d\" for user \"uid:%d\", because %s", categoryId, uid, err.Error())
@@ -202,7 +219,13 @@ func (a *TransactionCategoriesApi) CategoryModifyHandler(c *core.WebContext) (an
 	}
 
 	uid := c.GetCurrentUid()
-	category, err := a.categories.GetCategoryByCategoryId(c, uid, categoryModifyReq.Id)
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	category, err := a.categories.GetCategoryByCategoryId(c, uid, fundId, categoryModifyReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_categories.CategoryModifyHandler] failed to get category \"id:%d\" for user \"uid:%d\", because %s", categoryModifyReq.Id, uid, err.Error())
@@ -238,14 +261,14 @@ func (a *TransactionCategoriesApi) CategoryModifyHandler(c *core.WebContext) (an
 	}
 
 	if newCategory.ParentCategoryId != category.ParentCategoryId {
-		fromPrimaryCategory, err := a.categories.GetCategoryByCategoryId(c, uid, category.ParentCategoryId)
+		fromPrimaryCategory, err := a.categories.GetCategoryByCategoryId(c, uid, fundId, category.ParentCategoryId)
 
 		if err != nil {
 			log.Errorf(c, "[transaction_categories.CategoryModifyHandler] failed to get old primary category \"id:%d\" of category \"id:%d\" for user \"uid:%d\", because %s", category.ParentCategoryId, categoryModifyReq.Id, uid, err.Error())
 			return nil, errs.Or(err, errs.ErrOperationFailed)
 		}
 
-		toPrimaryCategory, err := a.categories.GetCategoryByCategoryId(c, uid, newCategory.ParentCategoryId)
+		toPrimaryCategory, err := a.categories.GetCategoryByCategoryId(c, uid, fundId, newCategory.ParentCategoryId)
 
 		if err != nil {
 			log.Errorf(c, "[transaction_categories.CategoryModifyHandler] failed to get new primary category \"id:%d\" of category \"id:%d\" for user \"uid:%d\", because %s", newCategory.ParentCategoryId, categoryModifyReq.Id, uid, err.Error())
@@ -288,7 +311,13 @@ func (a *TransactionCategoriesApi) CategoryHideHandler(c *core.WebContext) (any,
 	}
 
 	uid := c.GetCurrentUid()
-	err = a.categories.HideCategory(c, uid, []int64{categoryHideReq.Id}, categoryHideReq.Hidden)
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	err = a.categories.HideCategory(c, uid, fundId, []int64{categoryHideReq.Id}, categoryHideReq.Hidden)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_categories.CategoryHideHandler] failed to hide category \"id:%d\" for user \"uid:%d\", because %s", categoryHideReq.Id, uid, err.Error())
@@ -310,6 +339,12 @@ func (a *TransactionCategoriesApi) CategoryMoveHandler(c *core.WebContext) (any,
 	}
 
 	uid := c.GetCurrentUid()
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
 	categories := make([]*models.TransactionCategory, len(categoryMoveReq.NewDisplayOrders))
 
 	for i := 0; i < len(categoryMoveReq.NewDisplayOrders); i++ {
@@ -323,7 +358,7 @@ func (a *TransactionCategoriesApi) CategoryMoveHandler(c *core.WebContext) (any,
 		categories[i] = category
 	}
 
-	err = a.categories.ModifyCategoryDisplayOrders(c, uid, categories)
+	err = a.categories.ModifyCategoryDisplayOrders(c, uid, fundId, categories)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_categories.CategoryMoveHandler] failed to move categories for user \"uid:%d\", because %s", uid, err.Error())
@@ -345,7 +380,13 @@ func (a *TransactionCategoriesApi) CategoryDeleteHandler(c *core.WebContext) (an
 	}
 
 	uid := c.GetCurrentUid()
-	err = a.categories.DeleteCategory(c, uid, categoryDeleteReq.Id)
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	err = a.categories.DeleteCategory(c, uid, fundId, categoryDeleteReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_categories.CategoryDeleteHandler] failed to delete category \"id:%d\" for user \"uid:%d\", because %s", categoryDeleteReq.Id, uid, err.Error())
@@ -362,13 +403,18 @@ func (a *TransactionCategoriesApi) createBatchCategories(c *core.WebContext, uid
 	categoriesMap := make(map[*models.TransactionCategory][]*models.TransactionCategory)
 	categoriesMap[nil] = make([]*models.TransactionCategory, len(categoryCreateBatchReq.Categories))
 	totalCount := 0
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
 
 	for i := 0; i < len(categoryCreateBatchReq.Categories); i++ {
 		categoryCreateReq := categoryCreateBatchReq.Categories[i]
 		var maxOrderId, exists = categoryTypeMaxOrderMap[categoryCreateReq.Type]
 
 		if !exists {
-			maxOrderId, err = a.categories.GetMaxDisplayOrder(c, uid, categoryCreateReq.Type)
+			maxOrderId, err = a.categories.GetMaxDisplayOrder(c, uid, fundId, categoryCreateReq.Type)
 
 			if err != nil {
 				log.Errorf(c, "[transaction_categories.CategoryCreateBatchHandler] failed to get max display order for user \"uid:%d\", because %s", uid, err.Error())
@@ -396,7 +442,7 @@ func (a *TransactionCategoriesApi) createBatchCategories(c *core.WebContext, uid
 		totalCount++
 	}
 
-	categories, err := a.categories.CreateCategories(c, uid, categoriesMap)
+	categories, err := a.categories.CreateCategories(c, uid, fundId, categoriesMap)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_categories.createBatchCategories] failed to create categories for user \"uid:%d\", because %s", uid, err.Error())

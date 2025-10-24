@@ -63,21 +63,28 @@ func (a *DataManagementsApi) ExportDataToEzbookkeepingTSVHandler(c *core.WebCont
 // DataStatisticsHandler returns user data statistics
 func (a *DataManagementsApi) DataStatisticsHandler(c *core.WebContext) (any, *errs.Error) {
 	uid := c.GetCurrentUid()
-	totalAccountCount, err := a.accounts.GetTotalAccountCountByUid(c, uid)
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	totalAccountCount, err := a.accounts.GetTotalAccountCountByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.DataStatisticsHandler] failed to get total account count for user \"uid:%d\", because %s", uid, err.Error())
 		return nil, errs.ErrOperationFailed
 	}
 
-	totalTransactionCategoryCount, err := a.categories.GetTotalCategoryCountByUid(c, uid)
+	totalTransactionCategoryCount, err := a.categories.GetTotalCategoryCountByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.DataStatisticsHandler] failed to get total transaction category count for user \"uid:%d\", because %s", uid, err.Error())
 		return nil, errs.ErrOperationFailed
 	}
 
-	totalTransactionTagCount, err := a.tags.GetTotalTagCountByUid(c, uid)
+	totalTransactionTagCount, err := a.tags.GetTotalTagCountByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.DataStatisticsHandler] failed to get total transaction tag count for user \"uid:%d\", because %s", uid, err.Error())
@@ -136,6 +143,13 @@ func (a *DataManagementsApi) ClearAllDataHandler(c *core.WebContext) (any, *errs
 	}
 
 	uid := c.GetCurrentUid()
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
 	user, err := a.users.GetUserById(c, uid)
 
 	if err != nil {
@@ -168,14 +182,14 @@ func (a *DataManagementsApi) ClearAllDataHandler(c *core.WebContext) (any, *errs
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
-	err = a.categories.DeleteAllCategories(c, uid)
+	err = a.categories.DeleteAllCategories(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.ClearAllDataHandler] failed to delete all transaction categories, because %s", err.Error())
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
-	err = a.tags.DeleteAllTags(c, uid)
+	err = a.tags.DeleteAllTags(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.ClearAllDataHandler] failed to delete all transaction tags, because %s", err.Error())
@@ -244,6 +258,13 @@ func (a *DataManagementsApi) ClearAllTransactionsByAccountHandler(c *core.WebCon
 	}
 
 	uid := c.GetCurrentUid()
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
 	user, err := a.users.GetUserById(c, uid)
 
 	if err != nil {
@@ -262,7 +283,7 @@ func (a *DataManagementsApi) ClearAllTransactionsByAccountHandler(c *core.WebCon
 		return nil, errs.ErrNotPermittedToPerformThisAction
 	}
 
-	account, err := a.accounts.GetAccountByAccountId(c, uid, clearDataReq.AccountId)
+	account, err := a.accounts.GetAccountByAccountId(c, uid, fundId, clearDataReq.AccountId)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.ClearAllTransactionsByAccountHandler] failed to get account \"id:%d\" for user \"uid:%d\", because %s", uid, clearDataReq.AccountId, err.Error())
@@ -311,6 +332,13 @@ func (a *DataManagementsApi) getExportedFileContent(c *core.WebContext, fileType
 	}
 
 	uid := c.GetCurrentUid()
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, "", errFund
+	}
+
 	user, err := a.users.GetUserById(c, uid)
 
 	if err != nil {
@@ -325,28 +353,28 @@ func (a *DataManagementsApi) getExportedFileContent(c *core.WebContext, fileType
 		return nil, "", errs.ErrNotPermittedToPerformThisAction
 	}
 
-	accounts, err := a.accounts.GetAllAccountsByUid(c, uid)
+	accounts, err := a.accounts.GetAllAccountsByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.ExportDataHandler] failed to get all accounts for user \"uid:%d\", because %s", uid, err.Error())
 		return nil, "", errs.ErrOperationFailed
 	}
 
-	categories, err := a.categories.GetAllCategoriesByUid(c, uid, 0, -1)
+	categories, err := a.categories.GetAllCategoriesByUid(c, uid, fundId, 0, -1)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.ExportDataHandler] failed to get categories for user \"uid:%d\", because %s", uid, err.Error())
 		return nil, "", errs.ErrOperationFailed
 	}
 
-	tags, err := a.tags.GetAllTagsByUid(c, uid)
+	tags, err := a.tags.GetAllTagsByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.ExportDataHandler] failed to get tags for user \"uid:%d\", because %s", uid, err.Error())
 		return nil, "", errs.ErrOperationFailed
 	}
 
-	tagIndexes, err := a.tags.GetAllTagIdsMapOfAllTransactions(c, uid)
+	tagIndexes, err := a.tags.GetAllTagIdsMapOfAllTransactions(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[data_managements.ExportDataHandler] failed to get tag index for user \"uid:%d\", because %s", uid, err.Error())
@@ -357,14 +385,14 @@ func (a *DataManagementsApi) getExportedFileContent(c *core.WebContext, fileType
 	categoryMap := a.categories.GetCategoryMapByList(categories)
 	tagMap := a.tags.GetTagMapByList(tags)
 
-	allAccountIds, err := a.accounts.GetAccountOrSubAccountIds(c, exportTransactionDataReq.AccountIds, uid)
+	allAccountIds, err := a.accounts.GetAccountOrSubAccountIds(c, exportTransactionDataReq.AccountIds, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[data_managements.ExportDataHandler] get account error, because %s", err.Error())
 		return nil, "", errs.Or(err, errs.ErrOperationFailed)
 	}
 
-	allCategoryIds, err := a.categories.GetCategoryOrSubCategoryIds(c, exportTransactionDataReq.CategoryIds, uid)
+	allCategoryIds, err := a.categories.GetCategoryOrSubCategoryIds(c, exportTransactionDataReq.CategoryIds, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[data_managements.ExportDataHandler] get transaction category error, because %s", err.Error())

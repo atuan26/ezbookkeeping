@@ -77,6 +77,30 @@ func updateAllDatabaseTablesStructure(c *core.CliContext) error {
 
 	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] token record table maintained successfully")
 
+	err = datastore.Container.UserDataStore.SyncStructs(new(models.Fund))
+
+	if err != nil {
+		return err
+	}
+
+	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] fund table maintained successfully")
+
+	err = datastore.Container.UserDataStore.SyncStructs(new(models.FundMember))
+
+	if err != nil {
+		return err
+	}
+
+	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] fund member table maintained successfully")
+
+	err = datastore.Container.UserDataStore.SyncStructs(new(models.TransactionMember))
+
+	if err != nil {
+		return err
+	}
+
+	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] transaction member table maintained successfully")
+
 	err = datastore.Container.UserDataStore.SyncStructs(new(models.Account))
 
 	if err != nil {

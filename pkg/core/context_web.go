@@ -211,6 +211,25 @@ func (c *WebContext) GetResponseError() *errs.Error {
 	return err.(*errs.Error)
 }
 
+// GetCurrentFundId extracts fundId from URL parameter
+// Returns 0 if no fundId parameter is present (caller should handle default fund logic)
+func (c *WebContext) GetCurrentFundId() (int64, *errs.Error) {
+	fundIdStr := c.Param("fundId")
+
+	// If no fundId in URL, return 0 (caller handles default fund)
+	if fundIdStr == "" {
+		return 0, nil
+	}
+
+	// Parse fundId from URL parameter
+	fundId, err := strconv.ParseInt(fundIdStr, 10, 64)
+	if err != nil || fundId <= 0 {
+		return 0, errs.ErrFundIdInvalid
+	}
+
+	return fundId, nil
+}
+
 // WrapWebContext returns a context wrapped by this file
 func WrapWebContext(ginCtx *gin.Context) *WebContext {
 	return &WebContext{
