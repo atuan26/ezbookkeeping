@@ -16,12 +16,13 @@ const (
 // TransactionCategory represents transaction category data stored in database
 type TransactionCategory struct {
 	CategoryId       int64                   `xorm:"PK"`
-	Uid              int64                   `xorm:"INDEX(IDX_category_uid_deleted_type_parent_category_id_order) NOT NULL"`
-	Deleted          bool                    `xorm:"INDEX(IDX_category_uid_deleted_type_parent_category_id_order) NOT NULL"`
-	Type             TransactionCategoryType `xorm:"INDEX(IDX_category_uid_deleted_type_parent_category_id_order) NOT NULL"`
-	ParentCategoryId int64                   `xorm:"INDEX(IDX_category_uid_deleted_type_parent_category_id_order) NOT NULL"`
+	Uid              int64                   `xorm:"INDEX(IDX_category_fund_uid_deleted_type_parent_category_id_order) NOT NULL"`
+	FundId           int64                   `xorm:"INDEX(IDX_category_fund_uid_deleted_type_parent_category_id_order) NOT NULL"`
+	Deleted          bool                    `xorm:"INDEX(IDX_category_fund_uid_deleted_type_parent_category_id_order) NOT NULL"`
+	Type             TransactionCategoryType `xorm:"INDEX(IDX_category_fund_uid_deleted_type_parent_category_id_order) NOT NULL"`
+	ParentCategoryId int64                   `xorm:"INDEX(IDX_category_fund_uid_deleted_type_parent_category_id_order) NOT NULL"`
 	Name             string                  `xorm:"VARCHAR(64) NOT NULL"`
-	DisplayOrder     int32                   `xorm:"INDEX(IDX_category_uid_deleted_type_parent_category_id_order) NOT NULL"`
+	DisplayOrder     int32                   `xorm:"INDEX(IDX_category_fund_uid_deleted_type_parent_category_id_order) NOT NULL"`
 	Icon             int64                   `xorm:"NOT NULL"`
 	Color            string                  `xorm:"VARCHAR(6) NOT NULL"`
 	Hidden           bool                    `xorm:"NOT NULL"`

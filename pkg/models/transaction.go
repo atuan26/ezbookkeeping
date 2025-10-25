@@ -98,12 +98,13 @@ const (
 // Transaction represents transaction data stored in database
 type Transaction struct {
 	TransactionId        int64             `xorm:"PK"`
-	Uid                  int64             `xorm:"UNIQUE(UQE_transaction_uid_time) INDEX(IDX_transaction_uid_deleted_time) INDEX(IDX_transaction_uid_deleted_type_time) INDEX(IDX_transaction_uid_deleted_type_account_id_time) INDEX(IDX_transaction_uid_deleted_category_id_time) INDEX(IDX_transaction_uid_deleted_account_id_time) INDEX(IDX_transaction_uid_deleted_time_longitude_latitude) NOT NULL"`
-	Deleted              bool              `xorm:"INDEX(IDX_transaction_uid_deleted_time) INDEX(IDX_transaction_uid_deleted_type_time) INDEX(IDX_transaction_uid_deleted_type_account_id_time) INDEX(IDX_transaction_uid_deleted_category_id_time) INDEX(IDX_transaction_uid_deleted_account_id_time) INDEX(IDX_transaction_uid_deleted_time_longitude_latitude) NOT NULL"`
-	Type                 TransactionDbType `xorm:"INDEX(IDX_transaction_uid_deleted_type_time) INDEX(IDX_transaction_uid_deleted_type_account_id_time) NOT NULL"`
-	CategoryId           int64             `xorm:"INDEX(IDX_transaction_uid_deleted_category_id_time) NOT NULL"`
-	AccountId            int64             `xorm:"INDEX(IDX_transaction_uid_deleted_account_id_time) INDEX(IDX_transaction_uid_deleted_type_account_id_time) NOT NULL"`
-	TransactionTime      int64             `xorm:"UNIQUE(UQE_transaction_uid_time) INDEX(IDX_transaction_uid_deleted_time) INDEX(IDX_transaction_uid_deleted_type_time) INDEX(IDX_transaction_uid_deleted_type_account_id_time) INDEX(IDX_transaction_uid_deleted_category_id_time) INDEX(IDX_transaction_uid_deleted_account_id_time) NOT NULL"`
+	Uid                  int64             `xorm:"UNIQUE(UQE_transaction_fund_uid_time) INDEX(IDX_transaction_fund_uid_deleted_time) INDEX(IDX_transaction_fund_uid_deleted_type_time) INDEX(IDX_transaction_fund_uid_deleted_type_account_id_time) INDEX(IDX_transaction_fund_uid_deleted_category_id_time) INDEX(IDX_transaction_fund_uid_deleted_account_id_time) INDEX(IDX_transaction_fund_uid_deleted_time_longitude_latitude) NOT NULL"`
+	FundId               int64             `xorm:"UNIQUE(UQE_transaction_fund_uid_time) INDEX(IDX_transaction_fund_uid_deleted_time) INDEX(IDX_transaction_fund_uid_deleted_type_time) INDEX(IDX_transaction_fund_uid_deleted_type_account_id_time) INDEX(IDX_transaction_fund_uid_deleted_category_id_time) INDEX(IDX_transaction_fund_uid_deleted_account_id_time) INDEX(IDX_transaction_fund_uid_deleted_time_longitude_latitude) NOT NULL"`
+	Deleted              bool              `xorm:"INDEX(IDX_transaction_fund_uid_deleted_time) INDEX(IDX_transaction_fund_uid_deleted_type_time) INDEX(IDX_transaction_fund_uid_deleted_type_account_id_time) INDEX(IDX_transaction_fund_uid_deleted_category_id_time) INDEX(IDX_transaction_fund_uid_deleted_account_id_time) INDEX(IDX_transaction_fund_uid_deleted_time_longitude_latitude) NOT NULL"`
+	Type                 TransactionDbType `xorm:"INDEX(IDX_transaction_fund_uid_deleted_type_time) INDEX(IDX_transaction_fund_uid_deleted_type_account_id_time) NOT NULL"`
+	CategoryId           int64             `xorm:"INDEX(IDX_transaction_fund_uid_deleted_category_id_time) NOT NULL"`
+	AccountId            int64             `xorm:"INDEX(IDX_transaction_fund_uid_deleted_account_id_time) INDEX(IDX_transaction_fund_uid_deleted_type_account_id_time) NOT NULL"`
+	TransactionTime      int64             `xorm:"UNIQUE(UQE_transaction_fund_uid_time) INDEX(IDX_transaction_fund_uid_deleted_time) INDEX(IDX_transaction_fund_uid_deleted_type_time) INDEX(IDX_transaction_fund_uid_deleted_type_account_id_time) INDEX(IDX_transaction_fund_uid_deleted_category_id_time) INDEX(IDX_transaction_fund_uid_deleted_account_id_time) NOT NULL"`
 	TimezoneUtcOffset    int16             `xorm:"NOT NULL"`
 	Amount               int64             `xorm:"NOT NULL"`
 	RelatedId            int64             `xorm:"NOT NULL"`
@@ -146,6 +147,7 @@ type TransactionCreateRequest struct {
 	HideAmount           bool                           `json:"hideAmount"`
 	TagIds               []string                       `json:"tagIds"`
 	PictureIds           []string                       `json:"pictureIds"`
+	MemberIds            []int64                        `json:"memberIds"` // Empty = all members
 	Comment              string                         `json:"comment" binding:"max=255"`
 	GeoLocation          *TransactionGeoLocationRequest `json:"geoLocation" binding:"omitempty"`
 	ClientSessionId      string                         `json:"clientSessionId"`
@@ -164,6 +166,7 @@ type TransactionModifyRequest struct {
 	HideAmount           bool                           `json:"hideAmount"`
 	TagIds               []string                       `json:"tagIds"`
 	PictureIds           []string                       `json:"pictureIds"`
+	MemberIds            []int64                        `json:"memberIds"` // Empty = all members
 	Comment              string                         `json:"comment" binding:"max=255"`
 	GeoLocation          *TransactionGeoLocationRequest `json:"geoLocation" binding:"omitempty"`
 }
@@ -199,6 +202,7 @@ type TransactionListByMaxTimeRequest struct {
 	AccountIds    string                   `form:"account_ids"`
 	TagIds        string                   `form:"tag_ids"`
 	TagFilterType TransactionTagFilterType `form:"tag_filter_type" binding:"min=0,max=3"`
+	MemberId      int64                    `form:"member_id,string"` // Filter by specific member
 	AmountFilter  string                   `form:"amount_filter" binding:"validAmountFilter"`
 	Keyword       string                   `form:"keyword"`
 	MaxTime       int64                    `form:"max_time" binding:"min=0"` // Transaction time sequence id

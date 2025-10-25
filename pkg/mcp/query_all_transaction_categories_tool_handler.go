@@ -44,7 +44,23 @@ func (h *mcpQueryAllTransactionCategoriesToolHandler) OutputType() reflect.Type 
 // Handle processes the MCP call tool request and returns the response
 func (h *mcpQueryAllTransactionCategoriesToolHandler) Handle(c *core.WebContext, callToolReq *MCPCallToolRequest, user *models.User, currentConfig *settings.Config, services MCPAvailableServices) (any, []*MCPTextContent, error) {
 	uid := user.Uid
-	categories, err := services.GetTransactionCategoryService().GetAllCategoriesByUid(c, uid, 0, -1)
+
+	// Get user's first available fund for MCP operations
+	userFunds, err := services.GetFundService().GetUserFunds(c, uid)
+	if err != nil {
+		log.Errorf(c, "[query_all_transaction_categories.Handle] get user funds error, because %s", err.Error())
+		return nil, nil, err
+	}
+
+	if len(userFunds) == 0 {
+		log.Errorf(c, "[query_all_transaction_categories.Handle] no funds available for user \"uid:%d\"", uid)
+		return nil, nil, err
+	}
+
+	// Use the first available fund for MCP operations
+	fundId := userFunds[0].FundId
+
+	categories, err := services.GetTransactionCategoryService().GetAllCategoriesByUid(c, uid, fundId, 0, -1)
 
 	if err != nil {
 		log.Errorf(c, "[query_all_transaction_categories.Handle] failed to get categories for user \"uid:%d\", because %s", uid, err.Error())
