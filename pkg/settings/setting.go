@@ -93,7 +93,10 @@ const (
 
 // OAuth 2.0 provider types
 const (
+	OAuth2ProviderOIDC      string = "oidc"
 	OAuth2ProviderNextcloud string = "nextcloud"
+	OAuth2ProviderGitea     string = "gitea"
+	OAuth2ProviderGithub    string = "github"
 )
 
 // Map provider types
@@ -358,22 +361,26 @@ type Config struct {
 	MaxFailuresPerUserPerMinute           uint32
 
 	// Auth
-	EnableInternalAuth               bool
-	EnableOAuth2Login                bool
-	EnableTwoFactor                  bool
-	EnableUserForgetPassword         bool
-	ForgetPasswordRequireVerifyEmail bool
-	OAuth2ClientID                   string
-	OAuth2ClientSecret               string
-	OAuth2UserIdentifier             string
-	OAuth2AutoRegister               bool
-	OAuth2Provider                   string
-	OAuth2StateExpiredTime           uint32
-	OAuth2StateExpiredTimeDuration   time.Duration
-	OAuth2RequestTimeout             uint32
-	OAuth2Proxy                      string
-	OAuth2SkipTLSVerify              bool
-	OAuth2NextcloudBaseUrl           string
+	EnableInternalAuth                bool
+	EnableOAuth2Login                 bool
+	EnableTwoFactor                   bool
+	EnableUserForgetPassword          bool
+	ForgetPasswordRequireVerifyEmail  bool
+	OAuth2ClientID                    string
+	OAuth2ClientSecret                string
+	OAuth2UsePKCE                     bool
+	OAuth2UserIdentifier              string
+	OAuth2AutoRegister                bool
+	OAuth2Provider                    string
+	OAuth2StateExpiredTime            uint32
+	OAuth2StateExpiredTimeDuration    time.Duration
+	OAuth2RequestTimeout              uint32
+	OAuth2Proxy                       string
+	OAuth2SkipTLSVerify               bool
+	OAuth2OIDCProviderBaseUrl         string
+	OAuth2OIDCCustomDisplayNameConfig MultiLanguageContentConfig
+	OAuth2NextcloudBaseUrl            string
+	OAuth2GiteaBaseUrl                string
 
 	// User
 	EnableUserRegister            bool
@@ -983,6 +990,7 @@ func loadAuthConfiguration(config *Config, configFile *ini.File, sectionName str
 	config.ForgetPasswordRequireVerifyEmail = getConfigItemBoolValue(configFile, sectionName, "forget_password_require_email_verify", false)
 	config.OAuth2ClientID = getConfigItemStringValue(configFile, sectionName, "oauth2_client_id")
 	config.OAuth2ClientSecret = getConfigItemStringValue(configFile, sectionName, "oauth2_client_secret")
+	config.OAuth2UsePKCE = getConfigItemBoolValue(configFile, sectionName, "oauth2_use_pkce", false)
 
 	oauth2UserIdentifier := getConfigItemStringValue(configFile, sectionName, "oauth2_user_identifier")
 
@@ -1000,8 +1008,14 @@ func loadAuthConfiguration(config *Config, configFile *ini.File, sectionName str
 
 	if oauth2Provider == "" {
 		config.OAuth2Provider = ""
+	} else if oauth2Provider == OAuth2ProviderOIDC {
+		config.OAuth2Provider = OAuth2ProviderOIDC
 	} else if oauth2Provider == OAuth2ProviderNextcloud {
 		config.OAuth2Provider = OAuth2ProviderNextcloud
+	} else if oauth2Provider == OAuth2ProviderGitea {
+		config.OAuth2Provider = OAuth2ProviderGitea
+	} else if oauth2Provider == OAuth2ProviderGithub {
+		config.OAuth2Provider = OAuth2ProviderGithub
 	} else {
 		return errs.ErrInvalidOAuth2Provider
 	}
@@ -1018,7 +1032,10 @@ func loadAuthConfiguration(config *Config, configFile *ini.File, sectionName str
 	config.OAuth2RequestTimeout = getConfigItemUint32Value(configFile, sectionName, "oauth2_request_timeout", defaultOAuth2RequestTimeout)
 	config.OAuth2SkipTLSVerify = getConfigItemBoolValue(configFile, sectionName, "oauth2_skip_tls_verify", false)
 
+	config.OAuth2OIDCProviderBaseUrl = getConfigItemStringValue(configFile, sectionName, "oidc_provider_base_url")
+	config.OAuth2OIDCCustomDisplayNameConfig = getMultiLanguageContentConfig(configFile, sectionName, "enable_oidc_display_name", "oidc_custom_display_name")
 	config.OAuth2NextcloudBaseUrl = getConfigItemStringValue(configFile, sectionName, "nextcloud_base_url")
+	config.OAuth2GiteaBaseUrl = getConfigItemStringValue(configFile, sectionName, "gitea_base_url")
 
 	return nil
 }

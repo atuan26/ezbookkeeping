@@ -24,9 +24,10 @@
                     <v-card variant="flat" class="w-100 mt-0 px-4 pt-12" max-width="500">
                         <v-card-text>
                             <h4 class="text-h4 mb-2">{{ oauth2LoginDisplayName }}</h4>
-                            <p class="mb-0" v-if="!error && platform && token && !userName">{{ tt('Logging in...') }}</p>
-                            <p class="mb-0" v-else-if="!error && userName">{{ tt('format.misc.oauth2bindTip', { providerName: oauth2ProviderDisplayName, userName: userName }) }}</p>
+                            <p class="mb-0" v-if="!error && !errorMessage && platform && token && !userName">{{ tt('Logging in...') }}</p>
+                            <p class="mb-0" v-else-if="!error && !errorMessage && userName">{{ tt('format.misc.oauth2bindTip', { providerName: oauth2ProviderDisplayName, userName: userName }) }}</p>
                             <p class="mb-0" v-else-if="error">{{ te({ error }) }}</p>
+                            <p class="mb-0" v-else-if="errorMessage">{{ errorMessage }}</p>
                             <p class="mb-0" v-else>{{ tt('An error occurred') }}</p>
                         </v-card-text>
 
@@ -38,7 +39,7 @@
                                             type="password"
                                             autocomplete="password"
                                             :autofocus="true"
-                                            :disabled="logining"
+                                            :disabled="show2faInput || loggingInByOAuth2"
                                             :label="tt('Password')"
                                             :placeholder="tt('Your password')"
                                             v-model="password"
@@ -46,16 +47,29 @@
                                         />
                                     </v-col>
 
+                                    <v-col cols="12" v-show="show2faInput">
+                                        <v-text-field
+                                            type="number"
+                                            autocomplete="one-time-code"
+                                            ref="passcodeInput"
+                                            :disabled="loggingInByOAuth2"
+                                            :label="tt('Passcode')"
+                                            :placeholder="tt('Passcode')"
+                                            v-model="passcode"
+                                            @keyup.enter="verifyAndLogin"
+                                        />
+                                    </v-col>
+
                                     <v-col cols="12">
-                                        <v-btn block type="submit" :disabled="!password || logining" @click="verifyAndLogin">
+                                        <v-btn block type="submit" :disabled="!password || loggingInByOAuth2" @click="verifyAndLogin">
                                             {{ tt('Continue') }}
-                                            <v-progress-circular indeterminate size="22" class="ms-2" v-if="logining"></v-progress-circular>
+                                            <v-progress-circular indeterminate size="22" class="ms-2" v-if="loggingInByOAuth2"></v-progress-circular>
                                         </v-btn>
                                     </v-col>
 
                                     <v-col cols="12">
                                         <router-link class="d-flex align-center justify-center" to="/login"
-                                                     :class="{ 'disabled': logining }">
+                                                     :class="{ 'disabled': loggingInByOAuth2 }">
                                             <v-icon class="icon-with-direction" :icon="mdiChevronLeft"/>
                                             <span>{{ tt('Back to login page') }}</span>
                                         </router-link>
@@ -71,7 +85,7 @@
                         <v-card-text class="pt-0">
                             <v-row>
                                 <v-col cols="12" class="text-center">
-                                    <language-select-button :disabled="logining" />
+                                    <language-select-button :disabled="loggingInByOAuth2" />
                                 </v-col>
 
                                 <v-col cols="12" class="d-flex align-center pt-0">
@@ -96,7 +110,7 @@
 <script setup lang="ts">
 import SnackBar from '@/components/desktop/SnackBar.vue';
 
-import { computed, useTemplateRef } from 'vue';
+import { ref, computed, useTemplateRef } from 'vue';
 import { useRouter } from 'vue-router';
 import { useTheme } from 'vuetify';
 
@@ -106,7 +120,7 @@ import { useLoginPageBase } from '@/views/base/LoginPageBase.ts';
 import { useRootStore } from '@/stores/index.ts';
 
 import { ThemeType } from '@/core/theme.ts';
-import { type ErrorResponse } from '@/core/api.ts';
+import { type ErrorResponse, buildErrorResponse } from '@/core/api.ts';
 import { APPLICATION_LOGO_PATH } from '@/consts/asset.ts';
 import { KnownErrorCode } from '@/consts/api.ts';
 
@@ -146,11 +160,14 @@ const rootStore = useRootStore();
 const {
     version,
     password,
-    logining,
+    loggingInByOAuth2,
     doAfterLogin
 } = useLoginPageBase('desktop');
 
 const snackbar = useTemplateRef<SnackBarType>('snackbar');
+
+const passcode = ref<string>('');
+const show2faInput = ref<boolean>(false);
 
 const isDarkMode = computed<boolean>(() => theme.global.name.value === ThemeType.Dark);
 const oauth2ProviderDisplayName = computed<string>(() => getLocalizedOAuth2ProviderName(props.provider ?? '', getOIDCCustomDisplayNames()));
@@ -158,14 +175,7 @@ const oauth2LoginDisplayName = computed<string>(() => getLocalizedOAuth2LoginTex
 
 const error = computed<ErrorResponse | undefined>(() => {
     if (props.errorCode && props.errorMessage) {
-        const errorResponse: ErrorResponse = {
-            success: false,
-            errorCode: parseInt(props.errorCode),
-            errorMessage: props.errorMessage,
-            path: ''
-        };
-
-        return errorResponse;
+        return buildErrorResponse(parseInt(props.errorCode), props.errorMessage);
     } else {
         return undefined;
     }
@@ -197,20 +207,24 @@ function verifyAndLogin(): void  {
         return;
     }
 
-    logining.value = true;
+    loggingInByOAuth2.value = true;
 
     rootStore.authorizeOAuth2({
         password: password.value,
+        passcode: passcode.value,
         token: props.token || ''
     }).then(authResponse => {
-        logining.value = false;
+        loggingInByOAuth2.value = false;
         doAfterLogin(authResponse);
         navigateToHome();
     }).catch(error => {
-        logining.value = false;
+        loggingInByOAuth2.value = false;
 
         if (isUserVerifyEmailEnabled() && error.error && error.error.errorCode === KnownErrorCode.UserEmailNotVerified && error.error.context && error.error.context.email) {
             router.push(`/verify_email?email=${encodeURIComponent(error.error.context.email)}&emailSent=${error.error.context.hasValidEmailVerifyToken || false}`);
+            return;
+        } else if (error.error && error.error.errorCode === KnownErrorCode.TwoFactorAuthorizationPasscodeEmpty) {
+            show2faInput.value = true;
             return;
         }
 
@@ -221,16 +235,16 @@ function verifyAndLogin(): void  {
 }
 
 if (!error.value && props.platform && props.token && !props.userName) {
-    logining.value = true;
+    loggingInByOAuth2.value = true;
 
     rootStore.authorizeOAuth2({
         token: props.token
     }).then(authResponse => {
-        logining.value = false;
+        loggingInByOAuth2.value = false;
         doAfterLogin(authResponse);
         navigateToHome();
     }).catch(error => {
-        logining.value = false;
+        loggingInByOAuth2.value = false;
 
         if (isUserVerifyEmailEnabled() && error.error && error.error.errorCode === KnownErrorCode.UserEmailNotVerified && error.error.context && error.error.context.email) {
             router.push(`/verify_email?email=${encodeURIComponent(error.error.context.email)}&emailSent=${error.error.context.hasValidEmailVerifyToken || false}`);

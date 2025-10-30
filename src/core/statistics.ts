@@ -7,33 +7,53 @@ export enum StatisticsAnalysisType {
 }
 
 export class CategoricalChartType implements TypeAndName {
-    private static readonly allInstances: CategoricalChartType[] = [];
+    private static readonly allInstancesForAll: CategoricalChartType[] = [];
+    private static readonly allInstancesForDesktop: CategoricalChartType[] = [];
+    private static readonly allInstancesByType: Record<number, CategoricalChartType> = {};
 
-    public static readonly Pie = new CategoricalChartType(0, 'Pie Chart');
-    public static readonly Bar = new CategoricalChartType(1, 'Bar Chart');
+    public static readonly Pie = new CategoricalChartType(0, 'Pie Chart', false);
+    public static readonly Bar = new CategoricalChartType(1, 'Bar Chart', false);
+    public static readonly Radar = new CategoricalChartType(2, 'Radar Chart', true);
 
     public static readonly Default = CategoricalChartType.Pie;
 
     public readonly type: number;
     public readonly name: string;
+    public readonly desktopOnly: boolean = false;
 
-    private constructor(type: number, name: string) {
+    private constructor(type: number, name: string, desktopOnly: boolean) {
         this.type = type;
         this.name = name;
+        this.desktopOnly = desktopOnly;
 
-        CategoricalChartType.allInstances.push(this);
+        if (!desktopOnly) {
+            CategoricalChartType.allInstancesForAll.push(this);
+        }
+
+        CategoricalChartType.allInstancesForDesktop.push(this);
+        CategoricalChartType.allInstancesByType[type] = this;
     }
 
-    public static values(): CategoricalChartType[] {
-        return CategoricalChartType.allInstances;
+    public static isValidType(type: number): boolean {
+        return !!CategoricalChartType.allInstancesByType[type];
+    }
+
+    public static values(withDesktopOnlyChart: boolean): CategoricalChartType[] {
+        if (withDesktopOnlyChart) {
+            return CategoricalChartType.allInstancesForDesktop;
+        } else {
+            return CategoricalChartType.allInstancesForAll;
+        }
     }
 }
 
 export class TrendChartType implements TypeAndName {
     private static readonly allInstances: TrendChartType[] = [];
+    private static readonly allInstancesByType: Record<number, TrendChartType> = {};
 
     public static readonly Area = new TrendChartType(0, 'Area Chart');
     public static readonly Column = new TrendChartType(1, 'Column Chart');
+    public static readonly Bubble = new TrendChartType(2, 'Bubble Chart');
 
     public static readonly Default = TrendChartType.Column;
 
@@ -45,6 +65,11 @@ export class TrendChartType implements TypeAndName {
         this.name = name;
 
         TrendChartType.allInstances.push(this);
+        TrendChartType.allInstancesByType[type] = this;
+    }
+
+    public static isValidType(type: number): boolean {
+        return !!TrendChartType.allInstancesByType[type];
     }
 
     public static values(): TrendChartType[] {
@@ -77,30 +102,41 @@ export class AccountBalanceTrendChartType implements TypeAndName {
 }
 
 export class ChartDataType implements TypeAndName {
-    private static readonly allInstances: ChartDataType[] = [];
+    private static readonly allInstancesForAll: ChartDataType[] = [];
+    private static readonly allInstancesForDesktop: ChartDataType[] = [];
     private static readonly allInstancesByType: Record<number, ChartDataType> = {};
 
-    public static readonly ExpenseByAccount = new ChartDataType(0, 'Expense By Account', StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
-    public static readonly ExpenseByPrimaryCategory = new ChartDataType(1, 'Expense By Primary Category', StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
-    public static readonly ExpenseBySecondaryCategory = new ChartDataType(2, 'Expense By Secondary Category', StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
-    public static readonly IncomeByAccount = new ChartDataType(3, 'Income By Account', StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
-    public static readonly IncomeByPrimaryCategory = new ChartDataType(4, 'Income By Primary Category', StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
-    public static readonly IncomeBySecondaryCategory = new ChartDataType(5, 'Income By Secondary Category', StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
-    public static readonly AccountTotalAssets = new ChartDataType(6, 'Account Total Assets', StatisticsAnalysisType.CategoricalAnalysis);
-    public static readonly AccountTotalLiabilities = new ChartDataType(7, 'Account Total Liabilities', StatisticsAnalysisType.CategoricalAnalysis);
-    public static readonly TotalExpense = new ChartDataType(8, 'Total Expense', StatisticsAnalysisType.TrendAnalysis);
-    public static readonly TotalIncome = new ChartDataType(9, 'Total Income', StatisticsAnalysisType.TrendAnalysis);
-    public static readonly TotalBalance = new ChartDataType(10, 'Net Income', StatisticsAnalysisType.TrendAnalysis);
+    public static readonly Overview = new ChartDataType(16, 'Overview', true, true, StatisticsAnalysisType.CategoricalAnalysis);
+    public static readonly OutflowsByAccount = new ChartDataType(11, 'Outflows By Account', false, false, StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly ExpenseByAccount = new ChartDataType(0, 'Expense By Account', false, false, StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly ExpenseByPrimaryCategory = new ChartDataType(1, 'Expense By Primary Category', false, false, StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly ExpenseBySecondaryCategory = new ChartDataType(2, 'Expense By Secondary Category', false, false, StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly InflowsByAccount = new ChartDataType(12, 'Inflows By Account', false, false, StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly IncomeByAccount = new ChartDataType(3, 'Income By Account', false, false, StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly IncomeByPrimaryCategory = new ChartDataType(4, 'Income By Primary Category', false, false, StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly IncomeBySecondaryCategory = new ChartDataType(5, 'Income By Secondary Category', false, false, StatisticsAnalysisType.CategoricalAnalysis, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly AccountTotalAssets = new ChartDataType(6, 'Account Total Assets', false, false, StatisticsAnalysisType.CategoricalAnalysis);
+    public static readonly AccountTotalLiabilities = new ChartDataType(7, 'Account Total Liabilities', false, false, StatisticsAnalysisType.CategoricalAnalysis);
+    public static readonly TotalOutflows = new ChartDataType(13, 'Total Outflows', false, false, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly TotalExpense = new ChartDataType(8, 'Total Expense', false, false, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly TotalInflows = new ChartDataType(14, 'Total Inflows', false, false, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly TotalIncome = new ChartDataType(9, 'Total Income', false, false, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly NetCashFlow = new ChartDataType(15, 'Net Cash Flow', false, false, StatisticsAnalysisType.TrendAnalysis);
+    public static readonly NetIncome = new ChartDataType(10, 'Net Income', false, false, StatisticsAnalysisType.TrendAnalysis);
 
     public static readonly Default = ChartDataType.ExpenseByPrimaryCategory;
 
     public readonly type: number;
     public readonly name: string;
+    public readonly desktopOnly: boolean = false;
+    public readonly specialChart: boolean = false;
     private readonly availableAnalysisTypes: Record<number, boolean>;
 
-    private constructor(type: number, name: string, ...availableAnalysisTypes: StatisticsAnalysisType[]) {
+    private constructor(type: number, name: string, desktopOnly: boolean, specialChart: boolean, ...availableAnalysisTypes: StatisticsAnalysisType[]) {
         this.type = type;
         this.name = name;
+        this.desktopOnly = desktopOnly;
+        this.specialChart = specialChart;
         this.availableAnalysisTypes = {};
 
         if (availableAnalysisTypes) {
@@ -109,7 +145,11 @@ export class ChartDataType implements TypeAndName {
             }
         }
 
-        ChartDataType.allInstances.push(this);
+        if (!desktopOnly) {
+            ChartDataType.allInstancesForAll.push(this);
+        }
+
+        ChartDataType.allInstancesForDesktop.push(this);
         ChartDataType.allInstancesByType[type] = this;
     }
 
@@ -117,14 +157,16 @@ export class ChartDataType implements TypeAndName {
         return this.availableAnalysisTypes[analysisType] || false;
     }
 
-    public static values(analysisType?: StatisticsAnalysisType): ChartDataType[] {
+    public static values(analysisType?: StatisticsAnalysisType, withDesktopOnlyChart?: boolean): ChartDataType[] {
+        const availableInstances: ChartDataType[] = withDesktopOnlyChart ? ChartDataType.allInstancesForDesktop : ChartDataType.allInstancesForAll;
+
         if (analysisType === undefined) {
-            return ChartDataType.allInstances;
+            return availableInstances;
         }
 
         const ret: ChartDataType[] = [];
 
-        for (const chartDataType of ChartDataType.allInstances) {
+        for (const chartDataType of availableInstances) {
             if (chartDataType.isAvailableAnalysisType(analysisType)) {
                 ret.push(chartDataType);
             }

@@ -1,12 +1,16 @@
-package oauth2
+package nextcloud
 
 import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/mayswind/ezbookkeeping/pkg/auth/oauth2/data"
+	"github.com/mayswind/ezbookkeeping/pkg/auth/oauth2/provider"
+	"github.com/mayswind/ezbookkeeping/pkg/auth/oauth2/provider/common"
 	"github.com/mayswind/ezbookkeeping/pkg/core"
 	"github.com/mayswind/ezbookkeeping/pkg/errs"
 	"github.com/mayswind/ezbookkeeping/pkg/log"
+	"github.com/mayswind/ezbookkeeping/pkg/settings"
 )
 
 type nextcloudUserInfoResponse struct {
@@ -25,7 +29,7 @@ type nextcloudUserInfoResponse struct {
 
 // NextcloudOAuth2DataSource represents Nextcloud OAuth 2.0 data source
 type NextcloudOAuth2DataSource struct {
-	CommonOAuth2DataSource
+	common.CommonOAuth2DataSource
 	baseUrl string
 }
 
@@ -56,11 +60,12 @@ func (s *NextcloudOAuth2DataSource) GetUserInfoRequest() (*http.Request, error) 
 }
 
 // GetScopes returns the scopes required by the Nextcloud provider
-func (p *NextcloudOAuth2DataSource) GetScopes() []string {
+func (s *NextcloudOAuth2DataSource) GetScopes() []string {
 	return []string{}
 }
 
-func (p *NextcloudOAuth2DataSource) ParseUserInfo(c core.Context, body []byte) (*OAuth2UserInfo, error) {
+// ParseUserInfo returns the user info by parsing the response body
+func (s *NextcloudOAuth2DataSource) ParseUserInfo(c core.Context, body []byte) (*data.OAuth2UserInfo, error) {
 	userInfoResp := &nextcloudUserInfoResponse{}
 	err := json.Unmarshal(body, &userInfoResp)
 
@@ -84,7 +89,7 @@ func (p *NextcloudOAuth2DataSource) ParseUserInfo(c core.Context, body []byte) (
 		return nil, errs.ErrCannotRetrieveUserInfo
 	}
 
-	return &OAuth2UserInfo{
+	return &data.OAuth2UserInfo{
 		UserName: userInfoResp.OCS.Data.ID,
 		Email:    userInfoResp.OCS.Data.Email,
 		NickName: userInfoResp.OCS.Data.DisplayName,
@@ -92,14 +97,18 @@ func (p *NextcloudOAuth2DataSource) ParseUserInfo(c core.Context, body []byte) (
 }
 
 // NewNextcloudOAuth2Provider creates a new Nextcloud OAuth 2.0 provider instance
-func NewNextcloudOAuth2Provider(baseUrl string) OAuth2Provider {
+func NewNextcloudOAuth2Provider(config *settings.Config, redirectUrl string) (provider.OAuth2Provider, error) {
+	if len(config.OAuth2NextcloudBaseUrl) < 1 {
+		return nil, errs.ErrInvalidOAuth2Config
+	}
+
+	baseUrl := config.OAuth2NextcloudBaseUrl
+
 	if baseUrl[len(baseUrl)-1] != '/' {
 		baseUrl += "/"
 	}
 
-	return &CommonOAuth2Provider{
-		dataSource: &NextcloudOAuth2DataSource{
-			baseUrl: baseUrl,
-		},
-	}
+	return common.NewCommonOAuth2Provider(config, redirectUrl, &NextcloudOAuth2DataSource{
+		baseUrl: baseUrl,
+	}), nil
 }

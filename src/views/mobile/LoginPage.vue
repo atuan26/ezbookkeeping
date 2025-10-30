@@ -14,6 +14,7 @@
                 type="text"
                 autocomplete="username"
                 clear-button
+                :disabled="loggingInByPassword || loggingInByOAuth2"
                 :label="tt('Username')"
                 :placeholder="tt('Your username or email')"
                 v-model:value="username"
@@ -23,6 +24,7 @@
                 type="password"
                 autocomplete="current-password"
                 clear-button
+                :disabled="loggingInByPassword || loggingInByOAuth2"
                 :label="tt('Password')"
                 :placeholder="tt('Your password')"
                 v-model:value="password"
@@ -35,34 +37,36 @@
             <f7-list-item>
                 <template #title>
                     <small>
-                        <f7-link external :href="getDesktopVersionPath()">{{ tt('Switch to Desktop Version') }}</f7-link>
+                        <f7-link external :class="{ 'disabled': loggingInByPassword || loggingInByOAuth2 }" :href="getDesktopVersionPath()">{{ tt('Switch to Desktop Version') }}</f7-link>
                     </small>
                 </template>
                 <template #after>
                     <small>
-                        <f7-link :class="{'disabled': !isUserForgetPasswordEnabled()}" @click="forgetPasswordEmail = ''; showForgetPasswordSheet = true">{{ tt('Forget Password?') }}</f7-link>
+                        <f7-link :class="{ 'disabled': !isUserForgetPasswordEnabled() || loggingInByPassword || loggingInByOAuth2 }" @click="forgetPasswordEmail = ''; showForgetPasswordSheet = true">{{ tt('Forget Password?') }}</f7-link>
                     </small>
                 </template>
             </f7-list-item>
         </f7-list>
 
         <f7-list class="margin-vertical-half">
-            <f7-list-button :class="{ 'disabled': inputIsEmpty || logining }" :text="tt('Log In')" @click="login" v-if="isInternalAuthEnabled()"></f7-list-button>
+            <f7-list-button :class="{ 'disabled': inputIsEmpty || loggingInByPassword || loggingInByOAuth2 }" :text="tt('Log In')"
+                            @click="login" v-if="isInternalAuthEnabled()"></f7-list-button>
             <f7-list-item class="login-divider display-flex align-items-center" v-if="isInternalAuthEnabled() && isOAuth2Enabled()">
                 <hr class="margin-inline-end-half" />
                 <small>{{ tt('or') }}</small>
                 <hr class="margin-inline-start-half" />
             </f7-list-item>
-            <f7-list-button external :class="{ 'disabled': logining }" :href="oauth2LoginUrl" :text="oauth2LoginDisplayName" v-if="isOAuth2Enabled()"></f7-list-button>
+            <f7-list-button external :class="{ 'disabled': loggingInByPassword || loggingInByOAuth2 }" :href="oauth2LoginUrl" :text="oauth2LoginDisplayName"
+                            @click="loginByOAuth2" v-if="isOAuth2Enabled()"></f7-list-button>
             <f7-block-footer v-if="isInternalAuthEnabled()">
                 <span>{{ tt('Don\'t have an account?') }}</span>&nbsp;
-                <f7-link :class="{'disabled': !isUserRegistrationEnabled()}" href="/signup" :text="tt('Create an account')"></f7-link>
+                <f7-link :class="{ 'disabled': !isUserRegistrationEnabled() || loggingInByPassword || loggingInByOAuth2 }" href="/signup" :text="tt('Create an account')"></f7-link>
             </f7-block-footer>
             <f7-block-footer class="padding-bottom">
             </f7-block-footer>
         </f7-list>
 
-        <language-select-button />
+        <language-select-button :disabled="loggingInByPassword || loggingInByOAuth2" />
 
         <f7-list class="login-page-bottom">
             <f7-block-footer>
@@ -212,7 +216,8 @@ const {
     tempToken,
     twoFAVerifyType,
     oauth2ClientSessionId,
-    logining,
+    loggingInByPassword,
+    loggingInByOAuth2,
     verifying,
     inputIsEmpty,
     twoFAInputIsEmpty,
@@ -258,17 +263,17 @@ function login(): void {
         return;
     }
 
-    logining.value = true;
+    loggingInByPassword.value = true;
     resendVerifyEmail.value = '';
     hasValidEmailVerifyToken.value = false;
     currentPasswordForResendVerifyEmail.value = '';
-    showLoading(() => logining.value);
+    showLoading(() => loggingInByPassword.value);
 
     rootStore.authorize({
         loginName: username.value,
         password: password.value
     }).then(authResponse => {
-        logining.value = false;
+        loggingInByPassword.value = false;
         hideLoading();
 
         if (authResponse.need2FA) {
@@ -280,7 +285,7 @@ function login(): void {
         doAfterLogin(authResponse);
         router.refreshPage();
     }).catch(error => {
-        logining.value = false;
+        loggingInByPassword.value = false;
         hideLoading();
 
         if (isUserVerifyEmailEnabled() && error.error && error.error.errorCode === KnownErrorCode.UserEmailNotVerified && error.error.context && error.error.context.email) {
@@ -303,6 +308,11 @@ function loginByPressEnter(): void {
     }
 
     return login();
+}
+
+function loginByOAuth2(): void {
+    loggingInByOAuth2.value = true;
+    showLoading();
 }
 
 function verify(): void {

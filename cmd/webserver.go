@@ -112,6 +112,7 @@ func startWebServer(c *core.CliContext) error {
 		_ = v.RegisterValidation("notBlank", validators.NotBlank)
 		_ = v.RegisterValidation("validUsername", validators.ValidUsername)
 		_ = v.RegisterValidation("validEmail", validators.ValidEmail)
+		_ = v.RegisterValidation("validNickname", validators.ValidNickname)
 		_ = v.RegisterValidation("validCurrency", validators.ValidCurrency)
 		_ = v.RegisterValidation("validHexRGBColor", validators.ValidHexRGBColor)
 		_ = v.RegisterValidation("validAmountFilter", validators.ValidAmountFilter)
@@ -333,6 +334,12 @@ func startWebServer(c *core.CliContext) error {
 
 			if config.EnableUserVerifyEmail {
 				apiV1Route.POST("/users/verify_email/resend.json", bindApi(api.Users.UserSendVerifyEmailByLoginedUserHandler))
+			}
+
+			// External Authentications
+			if config.EnableOAuth2Login {
+				apiV1Route.GET("/users/external_auth/list.json", bindApi(api.UserExternalAuths.ExternalAuthListHanlder))
+				apiV1Route.POST("/users/external_auth/unlink.json", bindApi(api.UserExternalAuths.UnlinkExternalAuthHandler))
 			}
 
 			// Application Cloud Settings
