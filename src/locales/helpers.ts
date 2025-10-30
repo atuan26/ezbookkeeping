@@ -243,6 +243,7 @@ import logger from '@/lib/logger.ts';
 import { useSettingsStore } from '@/stores/setting.ts';
 import { useUserStore } from '@/stores/user.ts';
 import { useExchangeRatesStore } from '@/stores/exchangeRates.ts';
+import { useFundsStore } from '@/stores/fund';
 
 export interface LocalizedErrorParameter {
     readonly key: string;
@@ -290,6 +291,7 @@ export function useI18n() {
 
     const settingsStore = useSettingsStore();
     const userStore = useUserStore();
+    const fundsStore = useFundsStore();
     const exchangeRatesStore = useExchangeRatesStore();
 
     // private functions
@@ -492,7 +494,7 @@ export function useI18n() {
             defaultCurrencyDisplayType = CurrencyDisplayType.Default;
         }
 
-        const defaultCurrency = userStore.currentUserDefaultCurrency;
+        const defaultCurrency = fundsStore.currentCurrency;
 
         const ret = [];
         const defaultSampleValue = getFormattedAmountWithCurrency(12345, defaultCurrency, defaultCurrencyDisplayType, numeralSystem, decimalSeparator);
@@ -1980,7 +1982,7 @@ export function useI18n() {
         let finalCurrencyCode = '';
 
         if (!isBoolean(currencyCode) && !currencyCode) {
-            finalCurrencyCode = userStore.currentUserDefaultCurrency;
+            finalCurrencyCode = fundsStore.currentCurrency;
         } else if (isBoolean(currencyCode) && !currencyCode) {
             finalCurrencyCode = '';
         } else {
@@ -2065,7 +2067,7 @@ export function useI18n() {
 
     function getCategorizedAccountsWithDisplayBalance(allVisibleAccounts: Account[], showAccountBalance: boolean): CategorizedAccountWithDisplayBalance[] {
         const ret: CategorizedAccountWithDisplayBalance[] = [];
-        const defaultCurrency = userStore.currentUserDefaultCurrency;
+        const defaultCurrency = fundsStore.currentCurrency;
         const allCategories = AccountCategory.values();
         const categorizedAccounts: Record<number, CategorizedAccount> = getCategorizedAccountsMap(Account.cloneAccounts(allVisibleAccounts));
 

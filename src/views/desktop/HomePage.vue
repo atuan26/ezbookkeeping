@@ -201,6 +201,7 @@ import { useHomePageBase } from '@/views/base/HomePageBase.ts';
 import { useAccountsStore } from '@/stores/account.ts';
 import { useTransactionCategoriesStore } from '@/stores/transactionCategory.ts';
 import { useOverviewStore } from '@/stores/overview.ts';
+import { useFundsStore } from '@/stores/fund.ts';
 
 import { type NumeralSystem } from '@/core/numeral.ts';
 import { DateRange } from '@/core/datetime.ts';
@@ -245,6 +246,7 @@ const {
 const accountsStore = useAccountsStore();
 const transactionCategoriesStore = useTransactionCategoriesStore();
 const overviewStore = useOverviewStore();
+const fundsStore = useFundsStore();
 
 const snackbar = useTemplateRef<SnackBarType>('snackbar');
 
@@ -325,7 +327,14 @@ function reload(force: boolean): void {
 }
 
 if (isUserLogined() && isUserUnlocked()) {
-    reload(false);
+    // Ensure funds are loaded (will use cached data if already loaded by MainLayout)
+    fundsStore.ensureFundLoaded().then(() => {
+        reload(false);
+    }).catch((error) => {
+        console.error('Failed to ensure funds loaded before overview:', error);
+        // Still try to load overview in case of legacy mode (no funds)
+        reload(false);
+    });
 }
 </script>
 

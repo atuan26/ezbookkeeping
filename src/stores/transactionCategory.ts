@@ -1,6 +1,8 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 
+import { useFundsStore } from './fund.ts';
+
 import type { BeforeResolveFunction } from '@/core/base.ts';
 
 import { itemAndIndex, values } from '@/core/base.ts';
@@ -19,6 +21,8 @@ import services, { type ApiResponsePromise } from '@/lib/services.ts';
 import logger from '@/lib/logger.ts';
 
 export const useTransactionCategoriesStore = defineStore('transactionCategories', () =>{
+    const fundsStore = useFundsStore();
+    
     const allTransactionCategories = ref<Record<number, TransactionCategory[]>>({});
     const allTransactionCategoriesMap = ref<Record<string, TransactionCategory>>({});
     const transactionCategoryListStateInvalid = ref<boolean>(true);
@@ -188,7 +192,9 @@ export const useTransactionCategoriesStore = defineStore('transactionCategories'
         }
 
         return new Promise((resolve, reject) => {
-            services.getAllTransactionCategories().then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.getAllTransactionCategories({ fundId: fundId || undefined });
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -242,8 +248,11 @@ export const useTransactionCategoriesStore = defineStore('transactionCategories'
 
     function getCategory({ categoryId }: { categoryId: string }): Promise<TransactionCategory> {
         return new Promise((resolve, reject) => {
-            services.getTransactionCategory({
-                id: categoryId
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.getTransactionCategory({
+                    id: categoryId,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -271,15 +280,17 @@ export const useTransactionCategoriesStore = defineStore('transactionCategories'
 
     function saveCategory({ category, isEdit, clientSessionId }: { category: TransactionCategory, isEdit: boolean, clientSessionId: string }): Promise<TransactionCategory> {
         return new Promise((resolve, reject) => {
-            let promise: ApiResponsePromise<TransactionCategoryInfoResponse>;
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                let promise: ApiResponsePromise<TransactionCategoryInfoResponse>;
 
-            if (!isEdit) {
-                promise = services.addTransactionCategory(category.toCreateRequest(clientSessionId));
-            } else {
-                promise = services.modifyTransactionCategory(category.toModifyRequest());
-            }
+                if (!isEdit) {
+                    promise = services.addTransactionCategory({ ...category.toCreateRequest(clientSessionId), fundId: fundId || undefined });
+                } else {
+                    promise = services.modifyTransactionCategory({ ...category.toModifyRequest(), fundId: fundId || undefined });
+                }
 
-            promise.then(response => {
+                return promise;
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -324,7 +335,9 @@ export const useTransactionCategoriesStore = defineStore('transactionCategories'
 
     function addCategories(req: TransactionCategoryCreateBatchRequest): Promise<Record<number, TransactionCategory[]>> {
         return new Promise((resolve, reject) => {
-            services.addTransactionCategoryBatch(req).then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.addTransactionCategoryBatch({ ...req, fundId: fundId || undefined });
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -355,7 +368,9 @@ export const useTransactionCategoriesStore = defineStore('transactionCategories'
 
     function addPresetCategories(req: TransactionCategoryCreateBatchRequest): Promise<Record<number, TransactionCategory[]>> {
         return new Promise((resolve, reject) => {
-            services.addTransactionCategoryBatch(req).then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.addTransactionCategoryBatch({ ...req, fundId: fundId || undefined });
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -439,8 +454,11 @@ export const useTransactionCategoriesStore = defineStore('transactionCategories'
         }
 
         return new Promise((resolve, reject) => {
-            services.moveTransactionCategory({
-                newDisplayOrders: newDisplayOrders
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.moveTransactionCategory({
+                    newDisplayOrders: newDisplayOrders,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -470,9 +488,12 @@ export const useTransactionCategoriesStore = defineStore('transactionCategories'
 
     function hideCategory({ category, hidden }: { category: TransactionCategory, hidden: boolean }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.hideTransactionCategory({
-                id: category.id,
-                hidden: hidden
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.hideTransactionCategory({
+                    id: category.id,
+                    hidden: hidden,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -509,8 +530,11 @@ export const useTransactionCategoriesStore = defineStore('transactionCategories'
 
     function deleteCategory({ category, beforeResolve }: { category: TransactionCategory, beforeResolve?: BeforeResolveFunction }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.deleteTransactionCategory({
-                id: category.id
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.deleteTransactionCategory({
+                    id: category.id,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 

@@ -60,7 +60,23 @@ func (h *mcpQueryAllAccountsBalanceToolHandler) OutputType() reflect.Type {
 // Handle processes the MCP call tool request and returns the response
 func (h *mcpQueryAllAccountsBalanceToolHandler) Handle(c *core.WebContext, callToolReq *MCPCallToolRequest, user *models.User, currentConfig *settings.Config, services MCPAvailableServices) (any, []*MCPTextContent, error) {
 	uid := user.Uid
-	accounts, err := services.GetAccountService().GetAllAccountsByUid(c, uid)
+
+	// Get user's first available fund for MCP operations
+	userFunds, err := services.GetFundService().GetUserFunds(c, uid)
+	if err != nil {
+		log.Errorf(c, "[query_all_accounts_balance.Handle] get user funds error, because %s", err.Error())
+		return nil, nil, err
+	}
+
+	if len(userFunds) == 0 {
+		log.Errorf(c, "[query_all_accounts_balance.Handle] no funds available for user \"uid:%d\"", uid)
+		return nil, nil, err
+	}
+
+	// Use the first available fund for MCP operations
+	fundId := userFunds[0].FundId
+
+	accounts, err := services.GetAccountService().GetAllAccountsByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[query_all_accounts_balance_tool_handler.Handle] failed to get all accounts for user \"uid:%d\", because %s", uid, err.Error())

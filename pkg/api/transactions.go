@@ -69,14 +69,20 @@ func (a *TransactionsApi) TransactionCountHandler(c *core.WebContext) (any, *err
 
 	uid := c.GetCurrentUid()
 
-	allAccountIds, err := a.accounts.GetAccountOrSubAccountIds(c, transactionCountReq.AccountIds, uid)
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	allAccountIds, err := a.accounts.GetAccountOrSubAccountIds(c, transactionCountReq.AccountIds, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[transactions.TransactionCountHandler] get account error, because %s", err.Error())
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
-	allCategoryIds, err := a.transactionCategories.GetCategoryOrSubCategoryIds(c, transactionCountReq.CategoryIds, uid)
+	allCategoryIds, err := a.transactionCategories.GetCategoryOrSubCategoryIds(c, transactionCountReq.CategoryIds, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[transactions.TransactionCountHandler] get transaction category error, because %s", err.Error())
@@ -127,6 +133,13 @@ func (a *TransactionsApi) TransactionListHandler(c *core.WebContext) (any, *errs
 	}
 
 	uid := c.GetCurrentUid()
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
 	user, err := a.users.GetUserById(c, uid)
 
 	if err != nil {
@@ -137,14 +150,14 @@ func (a *TransactionsApi) TransactionListHandler(c *core.WebContext) (any, *errs
 		return nil, errs.ErrUserNotFound
 	}
 
-	allAccountIds, err := a.accounts.GetAccountOrSubAccountIds(c, transactionListReq.AccountIds, uid)
+	allAccountIds, err := a.accounts.GetAccountOrSubAccountIds(c, transactionListReq.AccountIds, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[transactions.TransactionListHandler] get account error, because %s", err.Error())
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
-	allCategoryIds, err := a.transactionCategories.GetCategoryOrSubCategoryIds(c, transactionListReq.CategoryIds, uid)
+	allCategoryIds, err := a.transactionCategories.GetCategoryOrSubCategoryIds(c, transactionListReq.CategoryIds, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[transactions.TransactionListHandler] get transaction category error, because %s", err.Error())
@@ -230,6 +243,13 @@ func (a *TransactionsApi) TransactionMonthListHandler(c *core.WebContext) (any, 
 	}
 
 	uid := c.GetCurrentUid()
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
 	user, err := a.users.GetUserById(c, uid)
 
 	if err != nil {
@@ -240,14 +260,14 @@ func (a *TransactionsApi) TransactionMonthListHandler(c *core.WebContext) (any, 
 		return nil, errs.ErrUserNotFound
 	}
 
-	allAccountIds, err := a.accounts.GetAccountOrSubAccountIds(c, transactionListReq.AccountIds, uid)
+	allAccountIds, err := a.accounts.GetAccountOrSubAccountIds(c, transactionListReq.AccountIds, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[transactions.TransactionMonthListHandler] get account error, because %s", err.Error())
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
-	allCategoryIds, err := a.transactionCategories.GetCategoryOrSubCategoryIds(c, transactionListReq.CategoryIds, uid)
+	allCategoryIds, err := a.transactionCategories.GetCategoryOrSubCategoryIds(c, transactionListReq.CategoryIds, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[transactions.TransactionMonthListHandler] get transaction category error, because %s", err.Error())
@@ -306,6 +326,13 @@ func (a *TransactionsApi) TransactionReconciliationStatementHandler(c *core.WebC
 	}
 
 	uid := c.GetCurrentUid()
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
 	user, err := a.users.GetUserById(c, uid)
 
 	if err != nil {
@@ -316,7 +343,7 @@ func (a *TransactionsApi) TransactionReconciliationStatementHandler(c *core.WebC
 		return nil, errs.ErrUserNotFound
 	}
 
-	account, err := a.accounts.GetAccountByAccountId(c, uid, reconciliationStatementRequest.AccountId)
+	account, err := a.accounts.GetAccountByAccountId(c, uid, fundId, reconciliationStatementRequest.AccountId)
 
 	if err != nil {
 		log.Errorf(c, "[transactions.TransactionReconciliationStatementHandler] failed to get account \"id:%d\" for user \"uid:%d\", because %s", reconciliationStatementRequest.AccountId, uid, err.Error())
@@ -577,7 +604,12 @@ func (a *TransactionsApi) TransactionAmountsHandler(c *core.WebContext) (any, *e
 
 	uid := c.GetCurrentUid()
 
-	accounts, err := a.accounts.GetAllAccountsByUid(c, uid)
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	accounts, err := a.accounts.GetAllAccountsByUid(c, uid, fundId)
 	accountMap := a.accounts.GetAccountMapByList(accounts)
 
 	if err != nil {
@@ -708,7 +740,11 @@ func (a *TransactionsApi) TransactionGetHandler(c *core.WebContext) (any, *errs.
 		accountIds = utils.ToUniqueInt64Slice(accountIds)
 	}
 
-	accountMap, err := a.accounts.GetAccountsByAccountIds(c, uid, accountIds)
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+	accountMap, err := a.accounts.GetAccountsByAccountIds(c, uid, fundId, accountIds)
 
 	if _, exists := accountMap[transaction.AccountId]; !exists {
 		log.Warnf(c, "[transactions.TransactionGetHandler] account of transaction \"id:%d\" does not exist for user \"uid:%d\"", transaction.TransactionId, uid)
@@ -722,7 +758,7 @@ func (a *TransactionsApi) TransactionGetHandler(c *core.WebContext) (any, *errs.
 		}
 	}
 
-	allTransactionTagIds, err := a.transactionTags.GetAllTagIdsOfTransactions(c, uid, []int64{transaction.TransactionId})
+	allTransactionTagIds, err := a.transactionTags.GetAllTagIdsOfTransactions(c, uid, fundId, []int64{transaction.TransactionId})
 
 	if err != nil {
 		log.Errorf(c, "[transactions.TransactionGetHandler] failed to get transactions tag ids for user \"uid:%d\", because %s", uid, err.Error())
@@ -734,7 +770,7 @@ func (a *TransactionsApi) TransactionGetHandler(c *core.WebContext) (any, *errs.
 	var pictureInfos []*models.TransactionPictureInfo
 
 	if !transactionGetReq.TrimCategory {
-		category, err = a.transactionCategories.GetCategoryByCategoryId(c, uid, transaction.CategoryId)
+		category, err = a.transactionCategories.GetCategoryByCategoryId(c, uid, fundId, transaction.CategoryId)
 
 		if err != nil {
 			log.Errorf(c, "[transactions.TransactionGetHandler] failed to get transactions category for user \"uid:%d\", because %s", uid, err.Error())
@@ -743,7 +779,7 @@ func (a *TransactionsApi) TransactionGetHandler(c *core.WebContext) (any, *errs.
 	}
 
 	if !transactionGetReq.TrimTag {
-		tagMap, err = a.transactionTags.GetTagsByTagIds(c, uid, utils.ToUniqueInt64Slice(a.transactionTags.GetTransactionTagIds(allTransactionTagIds)))
+		tagMap, err = a.transactionTags.GetTagsByTagIds(c, uid, fundId, utils.ToUniqueInt64Slice(a.transactionTags.GetTransactionTagIds(allTransactionTagIds)))
 
 		if err != nil {
 			log.Errorf(c, "[transactions.TransactionGetHandler] failed to get transactions tags for user \"uid:%d\", because %s", uid, err.Error())
@@ -984,7 +1020,12 @@ func (a *TransactionsApi) TransactionModifyHandler(c *core.WebContext) (any, *er
 		return nil, errs.ErrIncompleteOrIncorrectSubmission
 	}
 
-	allTransactionTagIds, err := a.transactionTags.GetAllTagIdsOfTransactions(c, uid, []int64{transaction.TransactionId})
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	allTransactionTagIds, err := a.transactionTags.GetAllTagIdsOfTransactions(c, uid, fundId, []int64{transaction.TransactionId})
 
 	if err != nil {
 		log.Errorf(c, "[transactions.TransactionModifyHandler] failed to get transactions tag ids for user \"uid:%d\", because %s", uid, err.Error())
@@ -1129,7 +1170,11 @@ func (a *TransactionsApi) TransactionMoveAllBetweenAccountsHandler(c *core.WebCo
 	}
 
 	uid := c.GetCurrentUid()
-	accountMap, err := a.accounts.GetAccountsByAccountIds(c, uid, []int64{transactionMoveReq.FromAccountId, transactionMoveReq.ToAccountId})
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+	accountMap, err := a.accounts.GetAccountsByAccountIds(c, uid, fundId, []int64{transactionMoveReq.FromAccountId, transactionMoveReq.ToAccountId})
 
 	if err != nil {
 		log.Errorf(c, "[transactions.TransactionMoveAllBetweenAccountsHandler] failed to get accounts for user \"uid:%d\", because %s", uid, err.Error())
@@ -1479,7 +1524,11 @@ func (a *TransactionsApi) TransactionParseImportFileHandler(c *core.WebContext) 
 		return nil, errs.ErrNotPermittedToPerformThisAction
 	}
 
-	accounts, err := a.accounts.GetAllAccountsByUid(c, user.Uid)
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+	accounts, err := a.accounts.GetAllAccountsByUid(c, user.Uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[transactions.TransactionParseImportFileHandler] failed to get accounts for user \"uid:%d\", because %s", user.Uid, err.Error())
@@ -1488,7 +1537,7 @@ func (a *TransactionsApi) TransactionParseImportFileHandler(c *core.WebContext) 
 
 	accountMap := a.accounts.GetVisibleAccountNameMapByList(accounts)
 
-	categories, err := a.transactionCategories.GetAllCategoriesByUid(c, user.Uid, 0, -1)
+	categories, err := a.transactionCategories.GetAllCategoriesByUid(c, user.Uid, fundId, 0, -1)
 
 	if err != nil {
 		log.Errorf(c, "[transactions.TransactionParseImportFileHandler] failed to get categories for user \"uid:%d\", because %s", user.Uid, err.Error())
@@ -1497,7 +1546,7 @@ func (a *TransactionsApi) TransactionParseImportFileHandler(c *core.WebContext) 
 
 	expenseCategoryMap, incomeCategoryMap, transferCategoryMap := a.transactionCategories.GetVisibleSubCategoryNameMapByList(categories)
 
-	tags, err := a.transactionTags.GetAllTagsByUid(c, user.Uid)
+	tags, err := a.transactionTags.GetAllTagsByUid(c, user.Uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[transactions.TransactionParseImportFileHandler] failed to get tags for user \"uid:%d\", because %s", user.Uid, err.Error())
@@ -1762,7 +1811,11 @@ func (a *TransactionsApi) getTransactionResponseListResult(c *core.WebContext, u
 		categoryIds = append(categoryIds, transactions[i].CategoryId)
 	}
 
-	allAccounts, err := a.accounts.GetAccountsByAccountIds(c, uid, utils.ToUniqueInt64Slice(accountIds))
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+	allAccounts, err := a.accounts.GetAccountsByAccountIds(c, uid, fundId, utils.ToUniqueInt64Slice(accountIds))
 
 	if err != nil {
 		log.Errorf(c, "[transactions.getTransactionResponseListResult] failed to get accounts for user \"uid:%d\", because %s", uid, err.Error())
@@ -1771,7 +1824,7 @@ func (a *TransactionsApi) getTransactionResponseListResult(c *core.WebContext, u
 
 	transactions = a.filterTransactions(c, uid, transactions, allAccounts)
 
-	allTransactionTagIds, err := a.transactionTags.GetAllTagIdsOfTransactions(c, uid, transactionIds)
+	allTransactionTagIds, err := a.transactionTags.GetAllTagIdsOfTransactions(c, uid, fundId, transactionIds)
 
 	if err != nil {
 		log.Errorf(c, "[transactions.getTransactionResponseListResult] failed to get transactions tag ids for user \"uid:%d\", because %s", uid, err.Error())
@@ -1783,7 +1836,7 @@ func (a *TransactionsApi) getTransactionResponseListResult(c *core.WebContext, u
 	var pictureInfoMap map[int64][]*models.TransactionPictureInfo
 
 	if !trimCategory {
-		categoryMap, err = a.transactionCategories.GetCategoriesByCategoryIds(c, uid, utils.ToUniqueInt64Slice(categoryIds))
+		categoryMap, err = a.transactionCategories.GetCategoriesByCategoryIds(c, uid, fundId, utils.ToUniqueInt64Slice(categoryIds))
 
 		if err != nil {
 			log.Errorf(c, "[transactions.getTransactionResponseListResult] failed to get transactions categories for user \"uid:%d\", because %s", uid, err.Error())
@@ -1792,7 +1845,7 @@ func (a *TransactionsApi) getTransactionResponseListResult(c *core.WebContext, u
 	}
 
 	if !trimTag {
-		tagMap, err = a.transactionTags.GetTagsByTagIds(c, uid, utils.ToUniqueInt64Slice(a.transactionTags.GetTransactionTagIds(allTransactionTagIds)))
+		tagMap, err = a.transactionTags.GetTagsByTagIds(c, uid, fundId, utils.ToUniqueInt64Slice(a.transactionTags.GetTransactionTagIds(allTransactionTagIds)))
 
 		if err != nil {
 			log.Errorf(c, "[transactions.getTransactionResponseListResult] failed to get transactions tags for user \"uid:%d\", because %s", uid, err.Error())

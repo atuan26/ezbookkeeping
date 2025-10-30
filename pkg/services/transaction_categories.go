@@ -33,25 +33,34 @@ var (
 )
 
 // GetTotalCategoryCountByUid returns total category count of user
-func (s *TransactionCategoryService) GetTotalCategoryCountByUid(c core.Context, uid int64) (int64, error) {
+func (s *TransactionCategoryService) GetTotalCategoryCountByUid(c core.Context, uid int64, fundId int64) (int64, error) {
 	if uid <= 0 {
 		return 0, errs.ErrUserIdInvalid
 	}
 
-	count, err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).Count(&models.TransactionCategory{})
+	if fundId <= 0 {
+		return 0, errs.ErrFundIdInvalid
+	}
+
+	count, err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Count(&models.TransactionCategory{})
 
 	return count, err
 }
 
 // GetAllCategoriesByUid returns all transaction category models of user
-func (s *TransactionCategoryService) GetAllCategoriesByUid(c core.Context, uid int64, categoryType models.TransactionCategoryType, parentCategoryId int64) ([]*models.TransactionCategory, error) {
+func (s *TransactionCategoryService) GetAllCategoriesByUid(c core.Context, uid int64, fundId int64, categoryType models.TransactionCategoryType, parentCategoryId int64) ([]*models.TransactionCategory, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
 	}
 
-	condition := "uid=? AND deleted=?"
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
+	}
+
+	condition := "uid=? AND fund_id=? AND deleted=?"
 	conditionParams := make([]any, 0, 8)
 	conditionParams = append(conditionParams, uid)
+	conditionParams = append(conditionParams, fundId)
 	conditionParams = append(conditionParams, false)
 
 	if categoryType > 0 {
@@ -71,18 +80,23 @@ func (s *TransactionCategoryService) GetAllCategoriesByUid(c core.Context, uid i
 }
 
 // GetSubCategoriesByCategoryIds returns sub-category models according to category ids
-func (s *TransactionCategoryService) GetSubCategoriesByCategoryIds(c core.Context, uid int64, categoryIds []int64) ([]*models.TransactionCategory, error) {
+func (s *TransactionCategoryService) GetSubCategoriesByCategoryIds(c core.Context, uid int64, fundId int64, categoryIds []int64) ([]*models.TransactionCategory, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if len(categoryIds) <= 0 {
 		return nil, errs.ErrTransactionCategoryIdInvalid
 	}
 
-	condition := "uid=? AND deleted=?"
-	conditionParams := make([]any, 0, len(categoryIds)+2)
+	condition := "uid=? AND fund_id=? AND deleted=?"
+	conditionParams := make([]any, 0, len(categoryIds)+3)
 	conditionParams = append(conditionParams, uid)
+	conditionParams = append(conditionParams, fundId)
 	conditionParams = append(conditionParams, false)
 
 	var categoryIdConditions strings.Builder
@@ -113,9 +127,13 @@ func (s *TransactionCategoryService) GetSubCategoriesByCategoryIds(c core.Contex
 }
 
 // GetCategoryByCategoryId returns a transaction category model according to transaction category id
-func (s *TransactionCategoryService) GetCategoryByCategoryId(c core.Context, uid int64, categoryId int64) (*models.TransactionCategory, error) {
+func (s *TransactionCategoryService) GetCategoryByCategoryId(c core.Context, uid int64, fundId int64, categoryId int64) (*models.TransactionCategory, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if categoryId <= 0 {
@@ -123,7 +141,7 @@ func (s *TransactionCategoryService) GetCategoryByCategoryId(c core.Context, uid
 	}
 
 	category := &models.TransactionCategory{}
-	has, err := s.UserDataDB(uid).NewSession(c).ID(categoryId).Where("uid=? AND deleted=?", uid, false).Get(category)
+	has, err := s.UserDataDB(uid).NewSession(c).ID(categoryId).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Get(category)
 
 	if err != nil {
 		return nil, err
@@ -135,9 +153,13 @@ func (s *TransactionCategoryService) GetCategoryByCategoryId(c core.Context, uid
 }
 
 // GetCategoriesByCategoryIds returns transaction category models according to transaction category ids
-func (s *TransactionCategoryService) GetCategoriesByCategoryIds(c core.Context, uid int64, categoryIds []int64) (map[int64]*models.TransactionCategory, error) {
+func (s *TransactionCategoryService) GetCategoriesByCategoryIds(c core.Context, uid int64, fundId int64, categoryIds []int64) (map[int64]*models.TransactionCategory, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if categoryIds == nil {
@@ -145,7 +167,7 @@ func (s *TransactionCategoryService) GetCategoriesByCategoryIds(c core.Context, 
 	}
 
 	var categories []*models.TransactionCategory
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).In("category_id", categoryIds).Find(&categories)
+	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("category_id", categoryIds).Find(&categories)
 
 	if err != nil {
 		return nil, err
@@ -156,13 +178,17 @@ func (s *TransactionCategoryService) GetCategoriesByCategoryIds(c core.Context, 
 }
 
 // GetMaxDisplayOrder returns the max display order according to transaction category type
-func (s *TransactionCategoryService) GetMaxDisplayOrder(c core.Context, uid int64, categoryType models.TransactionCategoryType) (int32, error) {
+func (s *TransactionCategoryService) GetMaxDisplayOrder(c core.Context, uid int64, fundId int64, categoryType models.TransactionCategoryType) (int32, error) {
 	if uid <= 0 {
 		return 0, errs.ErrUserIdInvalid
 	}
 
+	if fundId <= 0 {
+		return 0, errs.ErrFundIdInvalid
+	}
+
 	category := &models.TransactionCategory{}
-	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "deleted", "parent_category_id", "display_order").Where("uid=? AND deleted=? AND type=? AND parent_category_id=?", uid, false, categoryType, models.LevelOneTransactionCategoryParentId).OrderBy("display_order desc").Limit(1).Get(category)
+	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "fund_id", "deleted", "parent_category_id", "display_order").Where("uid=? AND fund_id=? AND deleted=? AND type=? AND parent_category_id=?", uid, fundId, false, categoryType, models.LevelOneTransactionCategoryParentId).OrderBy("display_order desc").Limit(1).Get(category)
 
 	if err != nil {
 		return 0, err
@@ -176,9 +202,13 @@ func (s *TransactionCategoryService) GetMaxDisplayOrder(c core.Context, uid int6
 }
 
 // GetMaxSubCategoryDisplayOrder returns the max display order of sub transaction category according to transaction category type and parent transaction category id
-func (s *TransactionCategoryService) GetMaxSubCategoryDisplayOrder(c core.Context, uid int64, categoryType models.TransactionCategoryType, parentCategoryId int64) (int32, error) {
+func (s *TransactionCategoryService) GetMaxSubCategoryDisplayOrder(c core.Context, uid int64, fundId int64, categoryType models.TransactionCategoryType, parentCategoryId int64) (int32, error) {
 	if uid <= 0 {
 		return 0, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return 0, errs.ErrFundIdInvalid
 	}
 
 	if parentCategoryId <= 0 {
@@ -186,7 +216,7 @@ func (s *TransactionCategoryService) GetMaxSubCategoryDisplayOrder(c core.Contex
 	}
 
 	category := &models.TransactionCategory{}
-	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "deleted", "parent_category_id", "display_order").Where("uid=? AND deleted=? AND type=? AND parent_category_id=?", uid, false, categoryType, parentCategoryId).OrderBy("display_order desc").Limit(1).Get(category)
+	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "fund_id", "deleted", "parent_category_id", "display_order").Where("uid=? AND fund_id=? AND deleted=? AND type=? AND parent_category_id=?", uid, fundId, false, categoryType, parentCategoryId).OrderBy("display_order desc").Limit(1).Get(category)
 
 	if err != nil {
 		return 0, err
@@ -203,6 +233,10 @@ func (s *TransactionCategoryService) GetMaxSubCategoryDisplayOrder(c core.Contex
 func (s *TransactionCategoryService) CreateCategory(c core.Context, category *models.TransactionCategory) error {
 	if category.Uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if category.FundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	category.CategoryId = s.GenerateUuid(uuid.UUID_TYPE_CATEGORY)
@@ -222,9 +256,13 @@ func (s *TransactionCategoryService) CreateCategory(c core.Context, category *mo
 }
 
 // CreateCategories saves a few transaction category models to database
-func (s *TransactionCategoryService) CreateCategories(c core.Context, uid int64, categories map[*models.TransactionCategory][]*models.TransactionCategory) ([]*models.TransactionCategory, error) {
+func (s *TransactionCategoryService) CreateCategories(c core.Context, uid int64, fundId int64, categories map[*models.TransactionCategory][]*models.TransactionCategory) ([]*models.TransactionCategory, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	var allCategories []*models.TransactionCategory
@@ -240,6 +278,8 @@ func (s *TransactionCategoryService) CreateCategories(c core.Context, uid int64,
 	for i := 0; i < len(primaryCategories); i++ {
 		primaryCategory := primaryCategories[i]
 		primaryCategory.CategoryId = primaryCategoryUuids[i]
+		primaryCategory.Uid = uid
+		primaryCategory.FundId = fundId
 		primaryCategory.Deleted = false
 		primaryCategory.CreatedUnixTime = time.Now().Unix()
 		primaryCategory.UpdatedUnixTime = time.Now().Unix()
@@ -259,6 +299,8 @@ func (s *TransactionCategoryService) CreateCategories(c core.Context, uid int64,
 			secondaryCategory := secondaryCategories[j]
 			secondaryCategory.CategoryId = secondaryCategoryUuids[j]
 			secondaryCategory.ParentCategoryId = primaryCategory.CategoryId
+			secondaryCategory.Uid = uid
+			secondaryCategory.FundId = fundId
 			secondaryCategory.Deleted = false
 			secondaryCategory.CreatedUnixTime = time.Now().Unix()
 			secondaryCategory.UpdatedUnixTime = time.Now().Unix()
@@ -293,10 +335,14 @@ func (s *TransactionCategoryService) ModifyCategory(c core.Context, category *mo
 		return errs.ErrUserIdInvalid
 	}
 
+	if category.FundId <= 0 {
+		return errs.ErrFundIdInvalid
+	}
+
 	category.UpdatedUnixTime = time.Now().Unix()
 
 	return s.UserDataDB(category.Uid).DoTransaction(c, func(sess *xorm.Session) error {
-		updatedRows, err := sess.ID(category.CategoryId).Cols("parent_category_id", "name", "icon", "color", "comment", "hidden", "updated_unix_time").Where("uid=? AND deleted=?", category.Uid, false).Update(category)
+		updatedRows, err := sess.ID(category.CategoryId).Cols("parent_category_id", "name", "icon", "color", "comment", "hidden", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", category.Uid, category.FundId, false).Update(category)
 
 		if err != nil {
 			return err
@@ -309,9 +355,13 @@ func (s *TransactionCategoryService) ModifyCategory(c core.Context, category *mo
 }
 
 // HideCategory updates hidden field of given transaction categories
-func (s *TransactionCategoryService) HideCategory(c core.Context, uid int64, ids []int64, hidden bool) error {
+func (s *TransactionCategoryService) HideCategory(c core.Context, uid int64, fundId int64, ids []int64, hidden bool) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	now := time.Now().Unix()
@@ -322,7 +372,7 @@ func (s *TransactionCategoryService) HideCategory(c core.Context, uid int64, ids
 	}
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
-		updatedRows, err := sess.Cols("hidden", "updated_unix_time").Where("uid=? AND deleted=?", uid, false).In("category_id", ids).Update(updateModel)
+		updatedRows, err := sess.Cols("hidden", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("category_id", ids).Update(updateModel)
 
 		if err != nil {
 			return err
@@ -335,9 +385,13 @@ func (s *TransactionCategoryService) HideCategory(c core.Context, uid int64, ids
 }
 
 // ModifyCategoryDisplayOrders updates display order of given transaction categories
-func (s *TransactionCategoryService) ModifyCategoryDisplayOrders(c core.Context, uid int64, categories []*models.TransactionCategory) error {
+func (s *TransactionCategoryService) ModifyCategoryDisplayOrders(c core.Context, uid int64, fundId int64, categories []*models.TransactionCategory) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	for i := 0; i < len(categories); i++ {
@@ -347,7 +401,7 @@ func (s *TransactionCategoryService) ModifyCategoryDisplayOrders(c core.Context,
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
 		for i := 0; i < len(categories); i++ {
 			category := categories[i]
-			updatedRows, err := sess.ID(category.CategoryId).Cols("display_order", "updated_unix_time").Where("uid=? AND deleted=?", uid, false).Update(category)
+			updatedRows, err := sess.ID(category.CategoryId).Cols("display_order", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Update(category)
 
 			if err != nil {
 				return err
@@ -361,9 +415,13 @@ func (s *TransactionCategoryService) ModifyCategoryDisplayOrders(c core.Context,
 }
 
 // DeleteCategory deletes an existed transaction category from database
-func (s *TransactionCategoryService) DeleteCategory(c core.Context, uid int64, categoryId int64) error {
+func (s *TransactionCategoryService) DeleteCategory(c core.Context, uid int64, fundId int64, categoryId int64) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	now := time.Now().Unix()
@@ -375,7 +433,7 @@ func (s *TransactionCategoryService) DeleteCategory(c core.Context, uid int64, c
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
 		var categoryAndSubCategories []*models.TransactionCategory
-		err := sess.Where("uid=? AND deleted=? AND (category_id=? OR parent_category_id=?)", uid, false, categoryId, categoryId).Find(&categoryAndSubCategories)
+		err := sess.Where("uid=? AND fund_id=? AND deleted=? AND (category_id=? OR parent_category_id=?)", uid, fundId, false, categoryId, categoryId).Find(&categoryAndSubCategories)
 
 		if err != nil {
 			return err
@@ -389,7 +447,7 @@ func (s *TransactionCategoryService) DeleteCategory(c core.Context, uid int64, c
 			categoryAndSubCategoryIds[i] = categoryAndSubCategories[i].CategoryId
 		}
 
-		exists, err := sess.Cols("uid", "deleted", "category_id").Where("uid=? AND deleted=?", uid, false).In("category_id", categoryAndSubCategoryIds).Limit(1).Exist(&models.Transaction{})
+		exists, err := sess.Cols("uid", "fund_id", "deleted", "category_id").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("category_id", categoryAndSubCategoryIds).Limit(1).Exist(&models.Transaction{})
 
 		if err != nil {
 			return err
@@ -397,7 +455,7 @@ func (s *TransactionCategoryService) DeleteCategory(c core.Context, uid int64, c
 			return errs.ErrTransactionCategoryInUseCannotBeDeleted
 		}
 
-		exists, err = sess.Cols("uid", "deleted", "category_id", "template_type", "scheduled_frequency_type", "scheduled_end_time").Where("uid=? AND deleted=? AND (template_type=? OR (template_type=? AND scheduled_frequency_type<>? AND (scheduled_end_time IS NULL OR scheduled_end_time>=?)))", uid, false, models.TRANSACTION_TEMPLATE_TYPE_NORMAL, models.TRANSACTION_TEMPLATE_TYPE_SCHEDULE, models.TRANSACTION_SCHEDULE_FREQUENCY_TYPE_DISABLED, now).In("category_id", categoryAndSubCategoryIds).Limit(1).Exist(&models.TransactionTemplate{})
+		exists, err = sess.Cols("uid", "fund_id", "deleted", "category_id", "template_type", "scheduled_frequency_type", "scheduled_end_time").Where("uid=? AND fund_id=? AND deleted=? AND (template_type=? OR (template_type=? AND scheduled_frequency_type<>? AND (scheduled_end_time IS NULL OR scheduled_end_time>=?)))", uid, fundId, false, models.TRANSACTION_TEMPLATE_TYPE_NORMAL, models.TRANSACTION_TEMPLATE_TYPE_SCHEDULE, models.TRANSACTION_SCHEDULE_FREQUENCY_TYPE_DISABLED, now).In("category_id", categoryAndSubCategoryIds).Limit(1).Exist(&models.TransactionTemplate{})
 
 		if err != nil {
 			return err
@@ -405,7 +463,7 @@ func (s *TransactionCategoryService) DeleteCategory(c core.Context, uid int64, c
 			return errs.ErrTransactionCategoryInUseCannotBeDeleted
 		}
 
-		deletedRows, err := sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND deleted=?", uid, false).In("category_id", categoryAndSubCategoryIds).Update(updateModel)
+		deletedRows, err := sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("category_id", categoryAndSubCategoryIds).Update(updateModel)
 
 		if err != nil {
 			return err
@@ -418,9 +476,13 @@ func (s *TransactionCategoryService) DeleteCategory(c core.Context, uid int64, c
 }
 
 // DeleteAllCategories deletes all existed transaction categories from database
-func (s *TransactionCategoryService) DeleteAllCategories(c core.Context, uid int64) error {
+func (s *TransactionCategoryService) DeleteAllCategories(c core.Context, uid int64, fundId int64) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	now := time.Now().Unix()
@@ -431,7 +493,7 @@ func (s *TransactionCategoryService) DeleteAllCategories(c core.Context, uid int
 	}
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
-		exists, err := sess.Cols("uid", "deleted", "category_id").Where("uid=? AND deleted=? AND category_id<>?", uid, false, 0).Limit(1).Exist(&models.Transaction{})
+		exists, err := sess.Cols("uid", "fund_id", "deleted", "category_id").Where("uid=? AND fund_id=? AND deleted=? AND category_id<>?", uid, fundId, false, 0).Limit(1).Exist(&models.Transaction{})
 
 		if err != nil {
 			return err
@@ -439,7 +501,7 @@ func (s *TransactionCategoryService) DeleteAllCategories(c core.Context, uid int
 			return errs.ErrTransactionCategoryInUseCannotBeDeleted
 		}
 
-		_, err = sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND deleted=?", uid, false).Update(updateModel)
+		_, err = sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Update(updateModel)
 
 		if err != nil {
 			return err
@@ -534,7 +596,7 @@ func (s *TransactionCategoryService) GetCategoryNames(categories []*models.Trans
 }
 
 // GetCategoryOrSubCategoryIds returns all category ids and sub-category ids according to given category ids
-func (s *TransactionCategoryService) GetCategoryOrSubCategoryIds(c core.Context, categoryIds string, uid int64) ([]int64, error) {
+func (s *TransactionCategoryService) GetCategoryOrSubCategoryIds(c core.Context, categoryIds string, uid int64, fundId int64) ([]int64, error) {
 	if categoryIds == "" || categoryIds == "0" {
 		return nil, nil
 	}
@@ -548,7 +610,7 @@ func (s *TransactionCategoryService) GetCategoryOrSubCategoryIds(c core.Context,
 	var allCategoryIds []int64
 
 	if len(requestCategoryIds) > 0 {
-		allSubCategories, err := s.GetSubCategoriesByCategoryIds(c, uid, requestCategoryIds)
+		allSubCategories, err := s.GetSubCategoriesByCategoryIds(c, uid, fundId, requestCategoryIds)
 
 		if err != nil {
 			return nil, err

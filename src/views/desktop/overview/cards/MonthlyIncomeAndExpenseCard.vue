@@ -33,6 +33,7 @@ import { useI18n } from '@/locales/helpers.ts';
 
 import { useSettingsStore } from '@/stores/setting.ts';
 import { useUserStore } from '@/stores/user.ts';
+import { useFundsStore } from '@/stores/fund.ts';
 
 import { TextDirection } from '@/core/text.ts';
 import type { HiddenAmount } from '@/core/numeral.ts';
@@ -69,10 +70,11 @@ const {
 
 const settingsStore = useSettingsStore();
 const userStore = useUserStore();
+const fundsStore = useFundsStore();
 
 const textDirection = computed<TextDirection>(() => getCurrentLanguageTextDirection());
 const showAmountInHomePage = computed<boolean>(() => settingsStore.appSettings.showAmountInHomePage);
-const defaultCurrency = computed<string>(() => userStore.currentUserDefaultCurrency);
+const defaultCurrency = computed<string>(() => fundsStore.currentCurrency);
 const hasAnyData = computed<boolean>(() => {
     if (!props.data || !props.data.length || props.data.length < 1) {
         return false;

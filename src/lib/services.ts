@@ -144,6 +144,16 @@ import type {
 import type {
     RecognizedReceiptImageResponse
 } from '@/models/large_language_model.ts';
+import type {
+    FundInfoResponse,
+    FundMemberResponse,
+    FundCreateRequest,
+    FundModifyRequest,
+    FundDeleteRequest,
+    FundMemberCreateRequest,
+    FundMemberDeleteRequest,
+    FundMemberLinkRequest
+} from '@/models/fund.ts';
 
 import {
     getCurrentToken,
@@ -425,42 +435,84 @@ export default {
             timeout: DEFAULT_CLEAR_ALL_TRANSACTIONS_API_TIMEOUT
         } as ApiRequestConfig);
     },
-    getAllAccounts: ({ visibleOnly }: { visibleOnly: boolean }): ApiResponsePromise<AccountInfoResponse[]> => {
-        return axios.get<ApiResponse<AccountInfoResponse[]>>('v1/accounts/list.json?visible_only=' + visibleOnly);
+    getAllAccounts: ({ visibleOnly, fundId }: { visibleOnly: boolean, fundId?: string }): ApiResponsePromise<AccountInfoResponse[]> => {
+        const params = new URLSearchParams();
+        params.append('visible_only', visibleOnly.toString());
+
+        return axios.get<ApiResponse<AccountInfoResponse[]>>(`v1/funds/${fundId}/accounts/list.json?${params.toString()}`);
     },
-    getAccount: ({ id }: { id: string }): ApiResponsePromise<AccountInfoResponse> => {
-        return axios.get<ApiResponse<AccountInfoResponse>>('v1/accounts/get.json?id=' + id);
+    getAccount: ({ id, fundId }: { id: string, fundId?: string }): ApiResponsePromise<AccountInfoResponse> => {
+        const params = new URLSearchParams();
+        params.append('id', id);
+        return axios.get<ApiResponse<AccountInfoResponse>>(`v1/funds/${fundId}/accounts/get.json?${params.toString()}`);
     },
-    addAccount: (req: AccountCreateRequest): ApiResponsePromise<AccountInfoResponse> => {
-        return axios.post<ApiResponse<AccountInfoResponse>>('v1/accounts/add.json', req);
+    addAccount: (req: AccountCreateRequest, fundId?: string): ApiResponsePromise<AccountInfoResponse> => {
+        const baseUrl = `v1/funds/${fundId}/accounts/add.json`
+        return axios.post<ApiResponse<AccountInfoResponse>>(baseUrl, req);
     },
-    modifyAccount: (req: AccountModifyRequest): ApiResponsePromise<AccountInfoResponse> => {
-        return axios.post<ApiResponse<AccountInfoResponse>>('v1/accounts/modify.json', req);
+    modifyAccount: (req: AccountModifyRequest, fundId?: string): ApiResponsePromise<AccountInfoResponse> => {
+        const baseUrl = `v1/funds/${fundId}/accounts/modify.json`
+        return axios.post<ApiResponse<AccountInfoResponse>>(baseUrl, req);
     },
-    hideAccount: (req: AccountHideRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/accounts/hide.json', req);
+    hideAccount: (req: AccountHideRequest, fundId?: string): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${fundId}/accounts/hide.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    moveAccount: (req: AccountMoveRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/accounts/move.json', req);
+    moveAccount: (req: AccountMoveRequest, fundId?: string): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${fundId}/accounts/move.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    deleteAccount: (req: AccountDeleteRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/accounts/delete.json', req);
+    deleteAccount: (req: AccountDeleteRequest, fundId?: string): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${fundId}/accounts/delete.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    deleteSubAccount: (req: AccountDeleteRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/accounts/sub_account/delete.json', req);
+    deleteSubAccount: (req: AccountDeleteRequest, fundId?: string): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${fundId}/accounts/sub_account/delete.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
+    },
+    // Fund services
+    getAllFunds: (): ApiResponsePromise<FundInfoResponse[]> => {
+        return axios.get<ApiResponse<FundInfoResponse[]>>('v1/funds/list.json');
+    },
+    getFund: ({ id }: { id: string }): ApiResponsePromise<FundInfoResponse> => {
+        return axios.get<ApiResponse<FundInfoResponse>>('v1/funds/get.json?id=' + id);
+    },
+    addFund: (req: FundCreateRequest): ApiResponsePromise<FundInfoResponse> => {
+        return axios.post<ApiResponse<FundInfoResponse>>('v1/funds/add.json', req);
+    },
+    modifyFund: (req: FundModifyRequest): ApiResponsePromise<FundInfoResponse> => {
+        return axios.post<ApiResponse<FundInfoResponse>>('v1/funds/modify.json', req);
+    },
+    deleteFund: (req: FundDeleteRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/funds/delete.json', req);
+    },
+    getFundMembers: ({ fundId }: { fundId: string }): ApiResponsePromise<FundMemberResponse[]> => {
+        return axios.get<ApiResponse<FundMemberResponse[]>>('v1/funds/' + fundId + '/members/list.json');
+    },
+    addFundMember: (req: FundMemberCreateRequest): ApiResponsePromise<FundMemberResponse> => {
+        return axios.post<ApiResponse<FundMemberResponse>>('v1/funds/' + req.fundId + '/members/add.json', req);
+    },
+    removeFundMember: (req: FundMemberDeleteRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/funds/' + req.fundId + '/members/' + req.memberId + '/delete.json', req);
+    },
+    linkFundMember: (req: FundMemberLinkRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/funds/members/' + req.memberId + '/link.json', req);
     },
     getTransactions: (req: TransactionListByMaxTimeRequest): ApiResponsePromise<TransactionInfoPageWrapperResponse> => {
         const amountFilter = encodeURIComponent(req.amountFilter);
         const keyword = encodeURIComponent(req.keyword);
-        return axios.get<ApiResponse<TransactionInfoPageWrapperResponse>>(`v1/transactions/list.json?max_time=${req.maxTime}&min_time=${req.minTime}&type=${req.type}&category_ids=${req.categoryIds}&account_ids=${req.accountIds}&tag_ids=${req.tagIds}&tag_filter_type=${req.tagFilterType}&amount_filter=${amountFilter}&keyword=${keyword}&count=${req.count}&page=${req.page}&with_count=${req.withCount}&trim_account=true&trim_category=true&trim_tag=true`);
+        const baseUrl = `v1/funds/${req.fundId}/transactions/list.json`
+        return axios.get<ApiResponse<TransactionInfoPageWrapperResponse>>(`${baseUrl}?max_time=${req.maxTime}&min_time=${req.minTime}&type=${req.type}&category_ids=${req.categoryIds}&account_ids=${req.accountIds}&tag_ids=${req.tagIds}&tag_filter_type=${req.tagFilterType}&amount_filter=${amountFilter}&keyword=${keyword}&count=${req.count}&page=${req.page}&with_count=${req.withCount}&trim_account=true&trim_category=true&trim_tag=true`);
     },
     getAllTransactionsByMonth: (req: TransactionListInMonthByPageRequest): ApiResponsePromise<TransactionInfoPageWrapperResponse2> => {
         const amountFilter = encodeURIComponent(req.amountFilter);
         const keyword = encodeURIComponent(req.keyword);
-        return axios.get<ApiResponse<TransactionInfoPageWrapperResponse2>>(`v1/transactions/list/by_month.json?year=${req.year}&month=${req.month}&type=${req.type}&category_ids=${req.categoryIds}&account_ids=${req.accountIds}&tag_ids=${req.tagIds}&tag_filter_type=${req.tagFilterType}&amount_filter=${amountFilter}&keyword=${keyword}&trim_account=true&trim_category=true&trim_tag=true`);
+        const baseUrl = `v1/funds/${req.fundId}/transactions/list/by_month.json`
+        return axios.get<ApiResponse<TransactionInfoPageWrapperResponse2>>(`${baseUrl}?year=${req.year}&month=${req.month}&type=${req.type}&category_ids=${req.categoryIds}&account_ids=${req.accountIds}&tag_ids=${req.tagIds}&tag_filter_type=${req.tagFilterType}&amount_filter=${amountFilter}&keyword=${keyword}&trim_account=true&trim_category=true&trim_tag=true`);
     },
     getReconciliationStatements: (req: TransactionReconciliationStatementRequest): ApiResponsePromise<TransactionReconciliationStatementResponse> => {
-        return axios.get<ApiResponse<TransactionReconciliationStatementResponse>>(`v1/transactions/reconciliation_statements.json?account_id=${req.accountId}&start_time=${req.startTime}&end_time=${req.endTime}`);
+        const baseUrl = `v1/funds/${req.fundId}/transactions/reconciliation_statements.json`
+        return axios.get<ApiResponse<TransactionReconciliationStatementResponse>>(`${baseUrl}?account_id=${req.accountId}&start_time=${req.startTime}&end_time=${req.endTime}`);
     },
     getTransactionStatistics: (req: TransactionStatisticRequest): ApiResponsePromise<TransactionStatisticResponse> => {
         const queryParams = [];
@@ -485,7 +537,8 @@ export default {
             queryParams.push(`keyword=${encodeURIComponent(req.keyword)}`);
         }
 
-        return axios.get<ApiResponse<TransactionStatisticResponse>>(`v1/transactions/statistics.json?use_transaction_timezone=${req.useTransactionTimezone}` + (queryParams.length ? '&' + queryParams.join('&') : ''));
+        const baseUrl = `v1/funds/${req.fundId}/transactions/statistics.json`
+        return axios.get<ApiResponse<TransactionStatisticResponse>>(`${baseUrl}?use_transaction_timezone=${req.useTransactionTimezone}` + (queryParams.length ? '&' + queryParams.join('&') : ''));
     },
     getTransactionStatisticsTrends: (req: TransactionStatisticTrendsRequest): ApiResponsePromise<TransactionStatisticTrendsResponseItem[]> => {
         const queryParams = [];
@@ -510,9 +563,10 @@ export default {
             queryParams.push(`keyword=${encodeURIComponent(req.keyword)}`);
         }
 
-        return axios.get<ApiResponse<TransactionStatisticTrendsResponseItem[]>>(`v1/transactions/statistics/trends.json?use_transaction_timezone=${req.useTransactionTimezone}` + (queryParams.length ? '&' + queryParams.join('&') : ''));
+        const baseUrl = `v1/funds/${req.fundId}/transactions/statistics/trends.json`
+        return axios.get<ApiResponse<TransactionStatisticTrendsResponseItem[]>>(`${baseUrl}?use_transaction_timezone=${req.useTransactionTimezone}` + (queryParams.length ? '&' + queryParams.join('&') : ''));
     },
-    getTransactionAmounts: (params: TransactionAmountsRequestParams, excludeAccountIds: string[], excludeCategoryIds: string[]): ApiResponsePromise<TransactionAmountsResponse> => {
+    getTransactionAmounts: (params: TransactionAmountsRequestParams, excludeAccountIds: string[], excludeCategoryIds: string[], fundId?: string): ApiResponsePromise<TransactionAmountsResponse> => {
         const req = TransactionAmountsRequest.of(params);
         let queryParams = req.buildQuery();
 
@@ -524,26 +578,38 @@ export default {
             queryParams = queryParams + `&exclude_category_ids=${excludeCategoryIds.join(',')}`;
         }
 
-        return axios.get<ApiResponse<TransactionAmountsResponse>>(`v1/transactions/amounts.json?${queryParams}`);
+        const baseUrl = `v1/funds/${fundId}/transactions/amounts.json`
+        return axios.get<ApiResponse<TransactionAmountsResponse>>(`${baseUrl}?${queryParams}`);
     },
-    getTransaction: ({ id, withPictures }: { id: string, withPictures: boolean | undefined }): ApiResponsePromise<TransactionInfoResponse> => {
+    getTransaction: ({ id, withPictures, fundId }: { id: string, withPictures: boolean | undefined, fundId?: string }): ApiResponsePromise<TransactionInfoResponse> => {
         if (!isDefined(withPictures)) {
             withPictures = true;
         }
 
-        return axios.get<ApiResponse<TransactionInfoResponse>>(`v1/transactions/get.json?id=${id}&with_pictures=${withPictures}&trim_account=true&trim_category=true&trim_tag=true`);
+        const params = new URLSearchParams();
+        params.append('id', id);
+        params.append('with_pictures', withPictures.toString());
+        params.append('trim_account', 'true');
+        params.append('trim_category', 'true');
+        params.append('trim_tag', 'true');
+
+        const baseUrl = `v1/funds/${fundId}/transactions/get.json`
+        return axios.get<ApiResponse<TransactionInfoResponse>>(`${baseUrl}?${params.toString()}`);
     },
-    addTransaction: (req: TransactionCreateRequest): ApiResponsePromise<TransactionInfoResponse> => {
-        return axios.post<ApiResponse<TransactionInfoResponse>>('v1/transactions/add.json', req);
+    addTransaction: (req: TransactionCreateRequest, fundId?: string): ApiResponsePromise<TransactionInfoResponse> => {
+        const baseUrl = `v1/funds/${fundId}/transactions/add.json`
+        return axios.post<ApiResponse<TransactionInfoResponse>>(baseUrl, req);
     },
-    modifyTransaction: (req: TransactionModifyRequest): ApiResponsePromise<TransactionInfoResponse> => {
-        return axios.post<ApiResponse<TransactionInfoResponse>>('v1/transactions/modify.json', req);
+    modifyTransaction: (req: TransactionModifyRequest, fundId?: string): ApiResponsePromise<TransactionInfoResponse> => {
+        const baseUrl = `v1/funds/${fundId}/transactions/modify.json`
+        return axios.post<ApiResponse<TransactionInfoResponse>>(baseUrl, req);
     },
     moveAllTransactionsBetweenAccounts: (req: TransactionMoveBetweenAccountsRequest): ApiResponsePromise<boolean> => {
         return axios.post<ApiResponse<boolean>>('v1/transactions/move/all.json', req);
     },
-    deleteTransaction: (req: TransactionDeleteRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transactions/delete.json', req);
+    deleteTransaction: (req: TransactionDeleteRequest, fundId?: string): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${fundId}/transactions/delete.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
     parseImportDsvFile: ({ fileType, fileEncoding, importFile }: { fileType: string, fileEncoding?: string, importFile: File }): ApiResponsePromise<string[][]> => {
         return axios.postForm<ApiResponse<string[][]>>('v1/transactions/parse_dsv_file.json', {
@@ -610,74 +676,100 @@ export default {
     removeUnusedTransactionPicture: (req: TransactionPictureUnusedDeleteRequest): ApiResponsePromise<boolean> => {
         return axios.post<ApiResponse<boolean>>('v1/transaction/pictures/remove_unused.json', req);
     },
-    getAllTransactionCategories: (): ApiResponsePromise<Record<number, TransactionCategoryInfoResponse[]>> => {
-        return axios.get<ApiResponse<Record<number, TransactionCategoryInfoResponse[]>>>('v1/transaction/categories/list.json');
+    getAllTransactionCategories: ({ fundId }: { fundId?: string } = {}): ApiResponsePromise<Record<number, TransactionCategoryInfoResponse[]>> => {
+        if (fundId) {
+            return axios.get<ApiResponse<Record<number, TransactionCategoryInfoResponse[]>>>(`v1/funds/${fundId}/transaction/categories/list.json`);
+        } else {
+            return axios.get<ApiResponse<Record<number, TransactionCategoryInfoResponse[]>>>('v1/transaction/categories/list.json');
+        }
     },
-    getTransactionCategory: ({ id }: { id: string }): ApiResponsePromise<TransactionCategoryInfoResponse> => {
-        return axios.get<ApiResponse<TransactionCategoryInfoResponse>>('v1/transaction/categories/get.json?id=' + id);
+    getTransactionCategory: ({ id, fundId }: { id: string, fundId?: string }): ApiResponsePromise<TransactionCategoryInfoResponse> => {
+        const baseUrl = `v1/funds/${fundId}/transaction/categories/get.json`
+        return axios.get<ApiResponse<TransactionCategoryInfoResponse>>(`${baseUrl}?id=${id}`);
     },
-    addTransactionCategory: (req: TransactionCategoryCreateRequest): ApiResponsePromise<TransactionCategoryInfoResponse> => {
-        return axios.post<ApiResponse<TransactionCategoryInfoResponse>>('v1/transaction/categories/add.json', req);
+    addTransactionCategory: (req: TransactionCategoryCreateRequest & { fundId?: string }): ApiResponsePromise<TransactionCategoryInfoResponse> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/categories/add.json`
+        return axios.post<ApiResponse<TransactionCategoryInfoResponse>>(baseUrl, req);
     },
-    addTransactionCategoryBatch: (req: TransactionCategoryCreateBatchRequest): ApiResponsePromise<Record<number, TransactionCategoryInfoResponse[]>> => {
-        return axios.post<ApiResponse<Record<number, TransactionCategoryInfoResponse[]>>>('v1/transaction/categories/add_batch.json', req);
+    addTransactionCategoryBatch: (req: TransactionCategoryCreateBatchRequest & { fundId?: string }): ApiResponsePromise<Record<number, TransactionCategoryInfoResponse[]>> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/categories/add_batch.json`
+        return axios.post<ApiResponse<Record<number, TransactionCategoryInfoResponse[]>>>(baseUrl, req);
     },
-    modifyTransactionCategory: (req: TransactionCategoryModifyRequest): ApiResponsePromise<TransactionCategoryInfoResponse> => {
-        return axios.post<ApiResponse<TransactionCategoryInfoResponse>>('v1/transaction/categories/modify.json', req);
+    modifyTransactionCategory: (req: TransactionCategoryModifyRequest & { fundId?: string }): ApiResponsePromise<TransactionCategoryInfoResponse> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/categories/modify.json`
+        return axios.post<ApiResponse<TransactionCategoryInfoResponse>>(baseUrl, req);
     },
-    hideTransactionCategory: (req: TransactionCategoryHideRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transaction/categories/hide.json', req);
+    hideTransactionCategory: (req: TransactionCategoryHideRequest & { fundId?: string }): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/categories/hide.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    moveTransactionCategory: (req: TransactionCategoryMoveRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transaction/categories/move.json', req);
+    moveTransactionCategory: (req: TransactionCategoryMoveRequest & { fundId?: string }): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/categories/move.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    deleteTransactionCategory: (req: TransactionCategoryDeleteRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transaction/categories/delete.json', req);
+    deleteTransactionCategory: (req: TransactionCategoryDeleteRequest & { fundId?: string }): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/categories/delete.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    getAllTransactionTags: (): ApiResponsePromise<TransactionTagInfoResponse[]> => {
-        return axios.get<ApiResponse<TransactionTagInfoResponse[]>>('v1/transaction/tags/list.json');
+    getAllTransactionTags: ({ fundId }: { fundId?: string } = {}): ApiResponsePromise<TransactionTagInfoResponse[]> => {
+        return axios.get<ApiResponse<TransactionTagInfoResponse[]>>(`v1/funds/${fundId}/transaction/tags/list.json`);
     },
-    getTransactionTag: ({ id }: { id: string }): ApiResponsePromise<TransactionTagInfoResponse> => {
-        return axios.get<ApiResponse<TransactionTagInfoResponse>>('v1/transaction/tags/get.json?id=' + id);
+    getTransactionTag: ({ id, fundId }: { id: string, fundId?: string }): ApiResponsePromise<TransactionTagInfoResponse> => {
+        const baseUrl = `v1/funds/${fundId}/transaction/tags/get.json`
+        return axios.get<ApiResponse<TransactionTagInfoResponse>>(`${baseUrl}?id=${id}`);
     },
-    addTransactionTag: (req: TransactionTagCreateRequest): ApiResponsePromise<TransactionTagInfoResponse> => {
-        return axios.post<ApiResponse<TransactionTagInfoResponse>>('v1/transaction/tags/add.json', req);
+    addTransactionTag: (req: TransactionTagCreateRequest & { fundId?: string }): ApiResponsePromise<TransactionTagInfoResponse> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/tags/add.json`
+        return axios.post<ApiResponse<TransactionTagInfoResponse>>(baseUrl, req);
     },
-    addTransactionTagBatch: (req: TransactionTagCreateBatchRequest): ApiResponsePromise<TransactionTagInfoResponse[]> => {
-        return axios.post<ApiResponse<TransactionTagInfoResponse[]>>('v1/transaction/tags/add_batch.json', req);
+    addTransactionTagBatch: (req: TransactionTagCreateBatchRequest & { fundId?: string }): ApiResponsePromise<TransactionTagInfoResponse[]> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/tags/add_batch.json`
+        return axios.post<ApiResponse<TransactionTagInfoResponse[]>>(baseUrl, req);
     },
-    modifyTransactionTag: (req: TransactionTagModifyRequest): ApiResponsePromise<TransactionTagInfoResponse> => {
-        return axios.post<ApiResponse<TransactionTagInfoResponse>>('v1/transaction/tags/modify.json', req);
+    modifyTransactionTag: (req: TransactionTagModifyRequest & { fundId?: string }): ApiResponsePromise<TransactionTagInfoResponse> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/tags/modify.json`
+        return axios.post<ApiResponse<TransactionTagInfoResponse>>(baseUrl, req);
     },
-    hideTransactionTag: (req: TransactionTagHideRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transaction/tags/hide.json', req);
+    hideTransactionTag: (req: TransactionTagHideRequest & { fundId?: string }): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/tags/hide.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    moveTransactionTag: (req: TransactionTagMoveRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transaction/tags/move.json', req);
+    moveTransactionTag: (req: TransactionTagMoveRequest & { fundId?: string }): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/tags/move.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    deleteTransactionTag: (req: TransactionTagDeleteRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transaction/tags/delete.json', req);
+    deleteTransactionTag: (req: TransactionTagDeleteRequest & { fundId?: string }): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/tags/delete.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    getAllTransactionTemplates: ({ templateType }: { templateType: number }): ApiResponsePromise<TransactionTemplateInfoResponse[]> => {
-        return axios.get<ApiResponse<TransactionTemplateInfoResponse[]>>('v1/transaction/templates/list.json?templateType=' + templateType);
+    getAllTransactionTemplates: ({ templateType, fundId }: { templateType: number, fundId?: string }): ApiResponsePromise<TransactionTemplateInfoResponse[]> => {
+        const params = new URLSearchParams();
+        params.append('templateType', templateType.toString());
+        return axios.get<ApiResponse<TransactionTemplateInfoResponse[]>>(`v1/funds/${fundId}/transaction/templates/list.json?${params.toString()}`);
     },
-    getTransactionTemplate: ({ id }: { id: string }): ApiResponsePromise<TransactionTemplateInfoResponse> => {
-        return axios.get<ApiResponse<TransactionTemplateInfoResponse>>('v1/transaction/templates/get.json?id=' + id);
+    getTransactionTemplate: ({ id, fundId }: { id: string, fundId?: string }): ApiResponsePromise<TransactionTemplateInfoResponse> => {
+        const baseUrl = `v1/funds/${fundId}/transaction/templates/get.json`
+        return axios.get<ApiResponse<TransactionTemplateInfoResponse>>(`${baseUrl}?id=${id}`);
     },
-    addTransactionTemplate: (req: TransactionTemplateCreateRequest): ApiResponsePromise<TransactionTemplateInfoResponse> => {
-        return axios.post<ApiResponse<TransactionTemplateInfoResponse>>('v1/transaction/templates/add.json', req);
+    addTransactionTemplate: (req: TransactionTemplateCreateRequest & { fundId?: string }): ApiResponsePromise<TransactionTemplateInfoResponse> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/templates/add.json`
+        return axios.post<ApiResponse<TransactionTemplateInfoResponse>>(baseUrl, req);
     },
-    modifyTransactionTemplate: (req: TransactionTemplateModifyRequest): ApiResponsePromise<TransactionTemplateInfoResponse> => {
-        return axios.post<ApiResponse<TransactionTemplateInfoResponse>>('v1/transaction/templates/modify.json', req);
+    modifyTransactionTemplate: (req: TransactionTemplateModifyRequest & { fundId?: string }): ApiResponsePromise<TransactionTemplateInfoResponse> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/templates/modify.json`
+        return axios.post<ApiResponse<TransactionTemplateInfoResponse>>(baseUrl, req);
     },
-    hideTransactionTemplate: (req: TransactionTemplateHideRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transaction/templates/hide.json', req);
+    hideTransactionTemplate: (req: TransactionTemplateHideRequest & { fundId?: string }): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/templates/hide.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    moveTransactionTemplate: (req: TransactionTemplateMoveRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transaction/templates/move.json', req);
+    moveTransactionTemplate: (req: TransactionTemplateMoveRequest & { fundId?: string }): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/templates/move.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
-    deleteTransactionTemplate: (req: TransactionTemplateDeleteRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/transaction/templates/delete.json', req);
+    deleteTransactionTemplate: (req: TransactionTemplateDeleteRequest & { fundId?: string }): ApiResponsePromise<boolean> => {
+        const baseUrl = `v1/funds/${req.fundId}/transaction/templates/delete.json`
+        return axios.post<ApiResponse<boolean>>(baseUrl, req);
     },
     recognizeReceiptImage: ({ imageFile, cancelableUuid }: { imageFile: File, cancelableUuid?: string }): ApiResponsePromise<RecognizedReceiptImageResponse> => {
         return axios.postForm<ApiResponse<RecognizedReceiptImageResponse>>('v1/llm/transactions/recognize_receipt_image.json', {

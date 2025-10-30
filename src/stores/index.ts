@@ -4,6 +4,7 @@ import { defineStore } from 'pinia';
 import { useSettingsStore } from './setting.ts';
 import { useUserStore } from './user.ts';
 import { useAccountsStore } from './account.ts';
+import { useFundsStore } from './fund.ts';
 import { useTransactionCategoriesStore } from './transactionCategory.ts';
 import { useTransactionTagsStore } from './transactionTag.ts';
 import { useTransactionTemplatesStore } from './transactionTemplate.ts';
@@ -43,6 +44,7 @@ export const useRootStore = defineStore('root', () => {
     const settingsStore = useSettingsStore();
     const userStore = useUserStore();
     const accountsStore = useAccountsStore();
+    const fundsStore = useFundsStore();
     const transactionCategoriesStore = useTransactionCategoriesStore();
     const transactionTagsStore = useTransactionTagsStore();
     const transactionTemplatesStore = useTransactionTemplatesStore();
@@ -67,6 +69,7 @@ export const useRootStore = defineStore('root', () => {
         transactionCategoriesStore.resetTransactionCategories();
         transactionTemplatesStore.resetTransactionTemplates();
         accountsStore.resetAccounts();
+        fundsStore.resetFunds();
 
         if (resetUserInfoAndSettings) {
             userStore.resetUserBasicInfo();
@@ -435,7 +438,7 @@ export const useRootStore = defineStore('root', () => {
     }
 
     function updateUserProfile(req: UserProfileUpdateRequest): Promise<UserProfileUpdateResponse> {
-        const userDefaultCurrency = userStore.currentUserDefaultCurrency;
+        const userDefaultCurrency = fundsStore.currentCurrency;
 
         return new Promise((resolve, reject) => {
             services.updateProfile(req).then(response => {

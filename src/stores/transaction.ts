@@ -4,6 +4,7 @@ import { defineStore } from 'pinia';
 import { useSettingsStore } from './setting.ts';
 import { useUserStore } from './user.ts';
 import { useAccountsStore } from './account.ts';
+import { useFundsStore } from './fund.ts';
 import { useTransactionCategoriesStore } from './transactionCategory.ts';
 import { useOverviewStore } from './overview.ts';
 import { useStatisticsStore } from './statistics.ts';
@@ -59,7 +60,7 @@ import {
 import { getAmountWithDecimalNumberCount } from '@/lib/numeral.ts';
 import { getCurrencyFraction } from '@/lib/currency.ts';
 import { getFirstAvailableCategoryId } from '@/lib/category.ts';
-import services, { type ApiResponsePromise } from '@/lib/services.ts';
+import services from '@/lib/services.ts';
 import logger from '@/lib/logger.ts';
 
 export interface TransactionListPartialFilter {
@@ -109,6 +110,7 @@ export const useTransactionsStore = defineStore('transactions', () => {
     const settingsStore = useSettingsStore();
     const userStore = useUserStore();
     const accountsStore = useAccountsStore();
+    const fundsStore = useFundsStore();
     const transactionCategoriesStore = useTransactionCategoriesStore();
     const overviewStore = useOverviewStore();
     const statisticsStore = useStatisticsStore();
@@ -793,19 +795,22 @@ export const useTransactionsStore = defineStore('transactions', () => {
         }
 
         return new Promise((resolve, reject) => {
-            services.getTransactions({
-                maxTime: actualMaxTime,
-                minTime: transactionsFilter.value.minTime * 1000,
-                count: count || 50,
-                page: page || 1,
-                withCount: !!withCount,
-                type: transactionsFilter.value.type,
-                categoryIds: transactionsFilter.value.categoryIds,
-                accountIds: transactionsFilter.value.accountIds,
-                tagIds: transactionsFilter.value.tagIds,
-                tagFilterType: transactionsFilter.value.tagFilterType,
-                amountFilter: transactionsFilter.value.amountFilter,
-                keyword: transactionsFilter.value.keyword
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.getTransactions({
+                    maxTime: actualMaxTime,
+                    minTime: transactionsFilter.value.minTime * 1000,
+                    count: count || 50,
+                    page: page || 1,
+                    withCount: !!withCount,
+                    type: transactionsFilter.value.type,
+                    categoryIds: transactionsFilter.value.categoryIds,
+                    accountIds: transactionsFilter.value.accountIds,
+                    tagIds: transactionsFilter.value.tagIds,
+                    tagFilterType: transactionsFilter.value.tagFilterType,
+                    amountFilter: transactionsFilter.value.amountFilter,
+                    keyword: transactionsFilter.value.keyword,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -876,16 +881,20 @@ export const useTransactionsStore = defineStore('transactions', () => {
 
     function loadMonthlyAllTransactions({ year, month, autoExpand, defaultCurrency }: { year: number, month: number, autoExpand: boolean, defaultCurrency: string }): Promise<TransactionPageWrapper> {
         return new Promise((resolve, reject) => {
-            services.getAllTransactionsByMonth({
-                year: year,
-                month: month,
-                type: transactionsFilter.value.type,
-                categoryIds: transactionsFilter.value.categoryIds,
-                accountIds: transactionsFilter.value.accountIds,
-                tagIds: transactionsFilter.value.tagIds,
-                tagFilterType: transactionsFilter.value.tagFilterType,
-                amountFilter: transactionsFilter.value.amountFilter,
-                keyword: transactionsFilter.value.keyword
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                console.log('Transaction store - Fund ID for monthly transactions:', fundId);
+                return services.getAllTransactionsByMonth({
+                    year: year,
+                    month: month,
+                    type: transactionsFilter.value.type,
+                    categoryIds: transactionsFilter.value.categoryIds,
+                    accountIds: transactionsFilter.value.accountIds,
+                    tagIds: transactionsFilter.value.tagIds,
+                    tagFilterType: transactionsFilter.value.tagFilterType,
+                    amountFilter: transactionsFilter.value.amountFilter,
+                    keyword: transactionsFilter.value.keyword,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -994,9 +1003,12 @@ export const useTransactionsStore = defineStore('transactions', () => {
                 withPictures = true;
             }
 
-            services.getTransaction({
-                id: transactionId,
-                withPictures: withPictures
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.getTransaction({
+                    id: transactionId,
+                    withPictures: withPictures,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -1025,7 +1037,7 @@ export const useTransactionsStore = defineStore('transactions', () => {
     function saveTransaction({ transaction, defaultCurrency, isEdit, clientSessionId }: { transaction: Transaction, defaultCurrency: string, isEdit: boolean, clientSessionId: string }): Promise<Transaction> {
         return new Promise((resolve, reject) => {
             const actualTime = getActualUnixTimeForStore(transaction.time, transaction.utcOffset, getBrowserTimezoneOffsetMinutes());
-            let promise: ApiResponsePromise<TransactionInfoResponse>;
+            // let promise: ApiResponsePromise<TransactionInfoResponse>;
 
             if (transaction.type !== TransactionType.Expense &&
                 transaction.type !== TransactionType.Income &&
@@ -1038,13 +1050,13 @@ export const useTransactionsStore = defineStore('transactions', () => {
                 return;
             }
 
-            if (!isEdit) {
-                promise = services.addTransaction(transaction.toCreateRequest(clientSessionId, actualTime));
-            } else {
-                promise = services.modifyTransaction(transaction.toModifyRequest(actualTime));
-            }
-
-            promise.then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                if (!isEdit) {
+                    return services.addTransaction(transaction.toCreateRequest(clientSessionId, actualTime), fundId || undefined);
+                } else {
+                    return services.modifyTransaction(transaction.toModifyRequest(actualTime), fundId || undefined);
+                }
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -1150,8 +1162,10 @@ export const useTransactionsStore = defineStore('transactions', () => {
 
     function deleteTransaction({ transaction, defaultCurrency, beforeResolve }: { transaction: TransactionInfoResponse, defaultCurrency: string, beforeResolve?: BeforeResolveFunction }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.deleteTransaction({
-                id: transaction.id
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.deleteTransaction({
+                    id: transaction.id
+                }, fundId || undefined);
             }).then(response => {
                 const data = response.data;
 

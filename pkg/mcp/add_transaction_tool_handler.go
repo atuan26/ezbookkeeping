@@ -85,7 +85,23 @@ func (h *mcpAddTransactionToolHandler) Handle(c *core.WebContext, callToolReq *M
 	}
 
 	uid := user.Uid
-	allAccounts, err := services.GetAccountService().GetAllAccountsByUid(c, uid)
+
+	// Get user's first available fund for MCP operations
+	userFunds, err := services.GetFundService().GetUserFunds(c, uid)
+	if err != nil {
+		log.Warnf(c, "[add_transaction.Handle] get user funds error, because %s", err.Error())
+		return nil, nil, err
+	}
+
+	if len(userFunds) == 0 {
+		log.Warnf(c, "[add_transaction.Handle] no funds available for user \"uid:%d\"", uid)
+		return nil, nil, errs.ErrFundNotFound
+	}
+
+	// Use the first available fund for MCP operations
+	fundId := userFunds[0].FundId
+
+	allAccounts, err := services.GetAccountService().GetAllAccountsByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[add_transaction.Handle] get account error, because %s", err.Error())
@@ -114,7 +130,7 @@ func (h *mcpAddTransactionToolHandler) Handle(c *core.WebContext, callToolReq *M
 		destinationAccountId = destinationAccount.AccountId
 	}
 
-	allCategories, err := services.GetTransactionCategoryService().GetAllCategoriesByUid(c, uid, 0, -1)
+	allCategories, err := services.GetTransactionCategoryService().GetAllCategoriesByUid(c, uid, fundId, 0, -1)
 
 	if err != nil {
 		log.Warnf(c, "[add_transaction.Handle] get transaction category error, because %s", err.Error())
@@ -152,7 +168,7 @@ func (h *mcpAddTransactionToolHandler) Handle(c *core.WebContext, callToolReq *M
 	var tagIds []int64
 
 	if len(addTransactionRequest.Tags) > 0 {
-		allTags, err := services.GetTransactionTagService().GetAllTagsByUid(c, uid)
+		allTags, err := services.GetTransactionTagService().GetAllTagsByUid(c, uid, fundId)
 
 		if err != nil {
 			log.Warnf(c, "[add_transaction.Handle] get transaction tag ids error, because %s", err.Error())
@@ -171,7 +187,7 @@ func (h *mcpAddTransactionToolHandler) Handle(c *core.WebContext, callToolReq *M
 		}
 	}
 
-	transaction, err := h.createNewTransactionModel(uid, &addTransactionRequest, transactionCategory.CategoryId, sourceAccount.AccountId, destinationAccountId, c.ClientIP())
+	transaction, err := h.createNewTransactionModel(uid, fundId, &addTransactionRequest, transactionCategory.CategoryId, sourceAccount.AccountId, destinationAccountId, c.ClientIP())
 
 	if err != nil {
 		return nil, nil, err
@@ -199,7 +215,7 @@ func (h *mcpAddTransactionToolHandler) Handle(c *core.WebContext, callToolReq *M
 			accountIds = append(accountIds, destinationAccountId)
 		}
 
-		newAccounts, err := services.GetAccountService().GetAccountsByAccountIds(c, uid, accountIds)
+		newAccounts, err := services.GetAccountService().GetAccountsByAccountIds(c, uid, fundId, accountIds)
 
 		if err != nil {
 			log.Warnf(c, "[add_transaction.Handle] failed to get latest accounts info after transaction created, because %s", err.Error())
@@ -237,7 +253,7 @@ func (h *mcpAddTransactionToolHandler) Handle(c *core.WebContext, callToolReq *M
 	}
 }
 
-func (h *mcpAddTransactionToolHandler) createNewTransactionModel(uid int64, addTransactionRequest *MCPAddTransactionRequest, categoryId int64, sourceAccountId int64, destinationAccountId int64, clientIp string) (*models.Transaction, error) {
+func (h *mcpAddTransactionToolHandler) createNewTransactionModel(uid int64, fundId int64, addTransactionRequest *MCPAddTransactionRequest, categoryId int64, sourceAccountId int64, destinationAccountId int64, clientIp string) (*models.Transaction, error) {
 	var transactionDbType models.TransactionDbType
 
 	if addTransactionRequest.Type == transactionTypeExpense {
@@ -262,6 +278,7 @@ func (h *mcpAddTransactionToolHandler) createNewTransactionModel(uid int64, addT
 
 	transaction := &models.Transaction{
 		Uid:               uid,
+		FundId:            fundId,
 		Type:              transactionDbType,
 		CategoryId:        categoryId,
 		TransactionTime:   utils.GetMinTransactionTimeFromUnixTime(transactionTime.Unix()),

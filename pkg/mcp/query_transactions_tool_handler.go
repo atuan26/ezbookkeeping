@@ -119,7 +119,22 @@ func (h *mcpQueryTransactionsToolHandler) Handle(c *core.WebContext, callToolReq
 		transactionType = models.TRANSACTION_TYPE_TRANSFER
 	}
 
-	allAccounts, err := services.GetAccountService().GetAllAccountsByUid(c, uid)
+	// Get user's first available fund for MCP operations
+	userFunds, err := services.GetFundService().GetUserFunds(c, uid)
+	if err != nil {
+		log.Warnf(c, "[query_transactions.Handle] get user funds error, because %s", err.Error())
+		return nil, nil, err
+	}
+
+	if len(userFunds) == 0 {
+		log.Warnf(c, "[query_transactions.Handle] no funds available for user \"uid:%d\"", uid)
+		return nil, nil, err
+	}
+
+	// Use the first available fund for MCP operations
+	fundId := userFunds[0].FundId
+
+	allAccounts, err := services.GetAccountService().GetAllAccountsByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Warnf(c, "[add_transaction.Handle] get account error, because %s", err.Error())
@@ -136,7 +151,7 @@ func (h *mcpQueryTransactionsToolHandler) Handle(c *core.WebContext, callToolReq
 		}
 	}
 
-	allCategories, err := services.GetTransactionCategoryService().GetAllCategoriesByUid(c, uid, 0, -1)
+	allCategories, err := services.GetTransactionCategoryService().GetAllCategoriesByUid(c, uid, fundId, 0, -1)
 
 	if err != nil {
 		log.Warnf(c, "[add_transaction.Handle] get transaction category error, because %s", err.Error())

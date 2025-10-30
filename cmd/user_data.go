@@ -383,6 +383,26 @@ var UserData = &cli.Command{
 				},
 			},
 		},
+		{
+			Name:   "check-migration-status",
+			Usage:  "Check if migration has been performed",
+			Action: bindAction(checkMigrationStatus),
+		},
+		{
+			Name:   "migrate-to-funds",
+			Usage:  "Migrate all existing users to multi-fund system",
+			Action: bindAction(migrateToFunds),
+		},
+		{
+			Name:   "validate-migration",
+			Usage:  "Validate migration results",
+			Action: bindAction(validateMigration),
+		},
+		{
+			Name:   "rollback-migration",
+			Usage:  "Rollback migration (for testing purposes)",
+			Action: bindAction(rollbackMigration),
+		},
 	},
 }
 
@@ -984,4 +1004,72 @@ func printTokenInfo(token *models.TokenRecord) {
 	fmt.Printf("[ExpiredAt] %s (%d)\n", utils.FormatUnixTimeToLongDateTimeInServerTimezone(token.ExpiredUnixTime), token.ExpiredUnixTime)
 	fmt.Printf("[LastSeen] %s (%d)\n", utils.FormatUnixTimeToLongDateTimeInServerTimezone(token.LastSeenUnixTime), token.LastSeenUnixTime)
 	fmt.Printf("[UserAgent] %s\n", token.UserAgent)
+}
+
+func checkMigrationStatus(c *core.CliContext) error {
+	_, err := initializeSystem(c)
+
+	if err != nil {
+		return err
+	}
+
+	err = clis.Migration.CheckMigrationStatus(c)
+
+	if err != nil {
+		log.CliErrorf(c, "[user_data.checkMigrationStatus] error occurs when checking migration status")
+		return err
+	}
+
+	return nil
+}
+
+func migrateToFunds(c *core.CliContext) error {
+	_, err := initializeSystem(c)
+
+	if err != nil {
+		return err
+	}
+
+	err = clis.Migration.MigrateToFunds(c)
+
+	if err != nil {
+		log.CliErrorf(c, "[user_data.migrateToFunds] error occurs when migrating to funds")
+		return err
+	}
+
+	return nil
+}
+
+func validateMigration(c *core.CliContext) error {
+	_, err := initializeSystem(c)
+
+	if err != nil {
+		return err
+	}
+
+	err = clis.Migration.ValidateMigration(c)
+
+	if err != nil {
+		log.CliErrorf(c, "[user_data.validateMigration] error occurs when validating migration")
+		return err
+	}
+
+	return nil
+}
+
+func rollbackMigration(c *core.CliContext) error {
+	_, err := initializeSystem(c)
+
+	if err != nil {
+		return err
+	}
+
+	err = clis.Migration.RollbackMigration(c)
+
+	if err != nil {
+		log.CliErrorf(c, "[user_data.rollbackMigration] error occurs when rolling back migration")
+		return err
+	}
+
+	return nil
 }

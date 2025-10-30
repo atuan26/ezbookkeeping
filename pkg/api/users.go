@@ -25,6 +25,7 @@ type UsersApi struct {
 	users    *services.UserService
 	tokens   *services.TokenService
 	accounts *services.AccountService
+	funds    *services.FundService
 }
 
 // Initialize a user api singleton instance
@@ -44,6 +45,7 @@ var (
 		users:    services.Users,
 		tokens:   services.Tokens,
 		accounts: services.Accounts,
+		funds:    services.Funds,
 	}
 )
 
@@ -91,6 +93,14 @@ func (a *UsersApi) UserRegisterHandler(c *core.WebContext) (any, *errs.Error) {
 	}
 
 	log.Infof(c, "[users.UserRegisterHandler] user \"%s\" has registered successfully, uid is %d", user.Username, user.Uid)
+
+	fundCreateReq := &models.FundCreateRequest{
+		Name:            "Personal",
+		DefaultCurrency: userRegisterReq.DefaultCurrency,
+	}
+	a.funds.CreateFund(c, user.Uid, fundCreateReq)
+
+	log.Infof(c, "[users.UserRegisterHandler] default fund has been created for user \"%s\" successfully, uid is %d", user.Username, user.Uid)
 
 	presetCategoriesSaved := false
 
@@ -294,8 +304,13 @@ func (a *UsersApi) UserUpdateProfileHandler(c *core.WebContext) (any, *errs.Erro
 		anythingUpdate = true
 	}
 
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
 	if userUpdateReq.DefaultAccountId > 0 && userUpdateReq.DefaultAccountId != user.DefaultAccountId {
-		accountMap, err := a.accounts.GetAccountsByAccountIds(c, uid, []int64{userUpdateReq.DefaultAccountId})
+		accountMap, err := a.accounts.GetAccountsByAccountIds(c, uid, fundId, []int64{userUpdateReq.DefaultAccountId})
 
 		if err != nil || len(accountMap) < 1 {
 			return nil, errs.Or(err, errs.ErrUserDefaultAccountIsInvalid)

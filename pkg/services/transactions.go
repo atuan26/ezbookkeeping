@@ -390,9 +390,11 @@ func (s *TransactionService) CreateTransaction(c core.Context, transaction *mode
 		transactionTagIndexes[i] = &models.TransactionTagIndex{
 			TagIndexId:      tagIndexUuids[i],
 			Uid:             transaction.Uid,
+			FundId:          transaction.FundId,
 			Deleted:         false,
 			TagId:           tagIds[i],
 			TransactionId:   transaction.TransactionId,
+			TransactionTime: transaction.TransactionTime,
 			CreatedUnixTime: now,
 			UpdatedUnixTime: now,
 		}
@@ -497,9 +499,11 @@ func (s *TransactionService) BatchCreateTransactions(c core.Context, uid int64, 
 			transactionTagIndexes[i] = &models.TransactionTagIndex{
 				TagIndexId:      tagIndexUuids[tagIndexUuidIndex],
 				Uid:             transaction.Uid,
+				FundId:          transaction.FundId,
 				Deleted:         false,
 				TagId:           uniqueTagIds[i],
 				TransactionId:   transaction.TransactionId,
+				TransactionTime: transaction.TransactionTime,
 				CreatedUnixTime: now,
 				UpdatedUnixTime: now,
 			}
@@ -709,9 +713,11 @@ func (s *TransactionService) ModifyTransaction(c core.Context, transaction *mode
 		transactionTagIndexes[i] = &models.TransactionTagIndex{
 			TagIndexId:      tagIndexUuids[i],
 			Uid:             transaction.Uid,
+			FundId:          transaction.FundId,
 			Deleted:         false,
 			TagId:           addTagIds[i],
 			TransactionId:   transaction.TransactionId,
+			TransactionTime: transaction.TransactionTime,
 			CreatedUnixTime: now,
 			UpdatedUnixTime: now,
 		}
@@ -2774,4 +2780,15 @@ func (s *TransactionService) isPicturesValid(sess *xorm.Session, transaction *mo
 	}
 
 	return nil
+}
+
+// canUserAccessFund checks if user has access to a fund (either as owner or member)
+func (s *TransactionService) canUserAccessFund(c core.Context, uid int64, fundId int64) bool {
+	count, err := s.UserDataDB(uid).NewSession(c).Where("fund_id=? AND linked_uid=?", fundId, uid).Count(&models.FundMember{})
+	if err != nil {
+		log.Errorf(c, "[transactions.canUserAccessFund] failed to check fund access for user \"uid:%d\" and fund \"fund_id:%d\", because %s", uid, fundId, err.Error())
+		return false
+	}
+
+	return count > 0
 }

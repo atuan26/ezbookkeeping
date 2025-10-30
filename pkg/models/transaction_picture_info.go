@@ -4,8 +4,9 @@ const TransactionPictureNewPictureTransactionId = int64(0)
 
 // TransactionPictureInfo represents transaction picture file info stored in database
 type TransactionPictureInfo struct {
-	Uid              int64  `xorm:"INDEX(IDX_transaction_picture_uid_deleted_transaction_id_picture_id) INDEX(IDX_transaction_picture_uid_deleted_picture_id) NOT NULL"`
-	Deleted          bool   `xorm:"INDEX(IDX_transaction_picture_uid_deleted_transaction_id_picture_id) INDEX(IDX_transaction_picture_uid_deleted_picture_id) NOT NULL"`
+	Uid              int64  `xorm:"INDEX(IDX_transaction_picture_fund_uid_deleted_transaction_id_picture_id) INDEX(IDX_transaction_picture_fund_uid_deleted_picture_id) NOT NULL"`
+	FundId           int64  `xorm:"INDEX(IDX_transaction_picture_fund_uid_deleted_transaction_id_picture_id) INDEX(IDX_transaction_picture_fund_uid_deleted_picture_id) NOT NULL"`
+	Deleted          bool   `xorm:"INDEX(IDX_transaction_picture_fund_uid_deleted_transaction_id_picture_id) INDEX(IDX_transaction_picture_fund_uid_deleted_picture_id) NOT NULL"`
 	TransactionId    int64  `xorm:"INDEX(IDX_transaction_picture_uid_deleted_transaction_id_picture_id) NOT NULL"`
 	PictureId        int64  `xorm:"PK INDEX(IDX_transaction_picture_uid_deleted_transaction_id_picture_id) INDEX(IDX_transaction_picture_uid_deleted_picture_id)"`
 	PictureExtension string `xorm:"VARCHAR(10) NOT NULL"`

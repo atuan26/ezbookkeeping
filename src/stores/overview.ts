@@ -6,6 +6,7 @@ import { useUserStore } from './user.ts';
 import { useAccountsStore } from './account.ts';
 import { useTransactionCategoriesStore } from './transactionCategory.ts';
 import { useExchangeRatesStore } from './exchangeRates.ts';
+import { useFundsStore } from './fund.ts';
 
 import { type WritableStartEndTime, DateRange } from '@/core/datetime.ts';
 import { TimezoneTypeForStatistics } from '@/core/timezone.ts';
@@ -115,6 +116,7 @@ export const useOverviewStore = defineStore('overview', () => {
     const accountsStore = useAccountsStore();
     const transactionCategoriesStore = useTransactionCategoriesStore();
     const exchangeRatesStore = useExchangeRatesStore();
+    const fundsStore = useFundsStore();
 
     const transactionDataRange = ref<TransactionDataRange>(getTransactionDateRange());
 
@@ -141,7 +143,7 @@ export const useOverviewStore = defineStore('overview', () => {
         }
 
         const finalOverviewData: TransactionOverviewResponse = {};
-        const defaultCurrency = userStore.currentUserDefaultCurrency;
+        const defaultCurrency = fundsStore.currentCurrency;
 
         ALL_TRANSACTION_AMOUNTS_REQUEST_TYPE.forEach(field => {
             const item = overviewData[field];
@@ -303,7 +305,10 @@ export const useOverviewStore = defineStore('overview', () => {
         const excludeCategoryIds: string[] = objectFieldWithValueToArrayItem(settingsStore.appSettings.overviewTransactionCategoryFilterInHomePage, true);
 
         return new Promise((resolve, reject) => {
-            services.getTransactionAmounts(requestParams, excludeAccountIds, excludeCategoryIds).then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                console.log('Overview store - Fund ID for transaction amounts:', fundId);
+                return services.getTransactionAmounts(requestParams, excludeAccountIds, excludeCategoryIds, fundId || undefined);
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {

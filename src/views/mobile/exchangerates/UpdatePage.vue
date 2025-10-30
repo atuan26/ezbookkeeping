@@ -91,7 +91,6 @@ import type { Router } from 'framework7/types';
 import { useI18n } from '@/locales/helpers.ts';
 import { useI18nUIComponents, showLoading, hideLoading } from '@/lib/ui/mobile.ts';
 
-import { useUserStore } from '@/stores/user.ts';
 import { useExchangeRatesStore } from '@/stores/exchangeRates.ts';
 
 import type { LocalizedCurrencyInfo } from '@/core/currency.ts';
@@ -100,6 +99,7 @@ import {
     USER_CUSTOM_EXCHANGE_RATE_MAX_VALUE,
     USER_CUSTOM_EXCHANGE_RATE_MIN_VALUE
 } from '@/consts/exchange_rate.ts';
+import { useFundsStore } from '@/stores/fund';
 
 const props = defineProps<{
     f7router: Router.Router;
@@ -108,13 +108,13 @@ const props = defineProps<{
 const { tt, getAllCurrencies, getCurrencyName } = useI18n();
 const { showToast } = useI18nUIComponents();
 
-const userStore = useUserStore();
+const fundsStore = useFundsStore();
 const exchangeRatesStore = useExchangeRatesStore();
 
 const submitting = ref<boolean>(false);
-const defaultCurrency = ref<string>(userStore.currentUserDefaultCurrency);
+const defaultCurrency = ref<string>(fundsStore.currentCurrency);
 const defaultCurrencyAmount = ref<number>(1);
-const currency = ref<string>(userStore.currentUserDefaultCurrency);
+const currency = ref<string>(fundsStore.currentCurrency);
 const targetCurrencyAmount = ref<number>(1);
 const showCurrencyPopup = ref<boolean>(false);
 
@@ -122,7 +122,7 @@ const allCurrencies = computed<LocalizedCurrencyInfo[]>(() => getAllCurrencies()
 
 function init(): void {
     defaultCurrencyAmount.value = 1;
-    currency.value = userStore.currentUserDefaultCurrency;
+    currency.value = fundsStore.currentCurrency;
     targetCurrencyAmount.value = 1;
 }
 

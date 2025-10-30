@@ -1,6 +1,8 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 
+import { useFundsStore } from './fund.ts';
+
 import { type BeforeResolveFunction, itemAndIndex } from '@/core/base.ts';
 
 import {
@@ -16,6 +18,8 @@ import logger from '@/lib/logger.ts';
 import services, { type ApiResponsePromise } from '@/lib/services.ts';
 
 export const useTransactionTagsStore = defineStore('transactionTags', () => {
+    const fundsStore = useFundsStore();
+    
     const allTransactionTags = ref<TransactionTag[]>([]);
     const allTransactionTagsMap = ref<Record<string, TransactionTag>>({});
     const transactionTagListStateInvalid = ref<boolean>(true);
@@ -101,7 +105,9 @@ export const useTransactionTagsStore = defineStore('transactionTags', () => {
         }
 
         return new Promise((resolve, reject) => {
-            services.getAllTransactionTags().then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.getAllTransactionTags({ fundId: fundId || undefined });
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -145,13 +151,15 @@ export const useTransactionTagsStore = defineStore('transactionTags', () => {
         return new Promise((resolve, reject) => {
             let promise: ApiResponsePromise<TransactionTagInfoResponse>;
 
-            if (!tag.id) {
-                promise = services.addTransactionTag(tag.toCreateRequest());
-            } else {
-                promise = services.modifyTransactionTag(tag.toModifyRequest());
-            }
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                if (!tag.id) {
+                    promise = services.addTransactionTag({ ...tag.toCreateRequest(), fundId: fundId || undefined });
+                } else {
+                    promise = services.modifyTransactionTag({ ...tag.toModifyRequest(), fundId: fundId || undefined });
+                }
 
-            promise.then(response => {
+                return promise;
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -192,7 +200,9 @@ export const useTransactionTagsStore = defineStore('transactionTags', () => {
 
     function addTags(req: TransactionTagCreateBatchRequest): Promise<TransactionTag[]> {
         return new Promise((resolve, reject) => {
-            services.addTransactionTagBatch(req).then(response => {
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.addTransactionTagBatch({ ...req, fundId: fundId || undefined });
+            }).then(response => {
                 const data = response.data;
 
                 if (!data || !data.success || !data.result) {
@@ -258,8 +268,11 @@ export const useTransactionTagsStore = defineStore('transactionTags', () => {
         }
 
         return new Promise((resolve, reject) => {
-            services.moveTransactionTag({
-                newDisplayOrders: newDisplayOrders
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.moveTransactionTag({
+                    newDisplayOrders: newDisplayOrders,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -289,9 +302,12 @@ export const useTransactionTagsStore = defineStore('transactionTags', () => {
 
     function hideTag({ tag, hidden }: { tag: TransactionTag, hidden: boolean }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.hideTransactionTag({
-                id: tag.id,
-                hidden: hidden
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.hideTransactionTag({
+                    id: tag.id,
+                    hidden: hidden,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -327,8 +343,11 @@ export const useTransactionTagsStore = defineStore('transactionTags', () => {
 
     function deleteTag({ tag, beforeResolve }: { tag: TransactionTag, beforeResolve?: BeforeResolveFunction }): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            services.deleteTransactionTag({
-                id: tag.id
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.deleteTransactionTag({
+                    id: tag.id,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 

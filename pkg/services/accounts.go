@@ -35,32 +35,44 @@ var (
 )
 
 // GetTotalAccountCountByUid returns total account count of user
-func (s *AccountService) GetTotalAccountCountByUid(c core.Context, uid int64) (int64, error) {
+func (s *AccountService) GetTotalAccountCountByUid(c core.Context, uid int64, fundId int64) (int64, error) {
 	if uid <= 0 {
 		return 0, errs.ErrUserIdInvalid
 	}
 
-	count, err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).Count(&models.Account{})
+	if fundId <= 0 {
+		return 0, errs.ErrFundIdInvalid
+	}
+
+	count, err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Count(&models.Account{})
 
 	return count, err
 }
 
 // GetAllAccountsByUid returns all account models of user
-func (s *AccountService) GetAllAccountsByUid(c core.Context, uid int64) ([]*models.Account, error) {
+func (s *AccountService) GetAllAccountsByUid(c core.Context, uid int64, fundId int64) ([]*models.Account, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
 	}
 
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
+	}
+
 	var accounts []*models.Account
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).OrderBy("parent_account_id asc, display_order asc").Find(&accounts)
+	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).OrderBy("parent_account_id asc, display_order asc").Find(&accounts)
 
 	return accounts, err
 }
 
 // GetAccountByAccountId returns account model according to account id
-func (s *AccountService) GetAccountByAccountId(c core.Context, uid int64, accountId int64) (*models.Account, error) {
+func (s *AccountService) GetAccountByAccountId(c core.Context, uid int64, fundId int64, accountId int64) (*models.Account, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if accountId <= 0 {
@@ -68,7 +80,7 @@ func (s *AccountService) GetAccountByAccountId(c core.Context, uid int64, accoun
 	}
 
 	account := &models.Account{}
-	has, err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=? AND account_id=?", uid, false, accountId).Get(account)
+	has, err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=? AND account_id=?", uid, fundId, false, accountId).Get(account)
 
 	if err != nil {
 		return nil, err
@@ -80,9 +92,13 @@ func (s *AccountService) GetAccountByAccountId(c core.Context, uid int64, accoun
 }
 
 // GetAccountAndSubAccountsByAccountId returns account model and sub-account models according to account id
-func (s *AccountService) GetAccountAndSubAccountsByAccountId(c core.Context, uid int64, accountId int64) ([]*models.Account, error) {
+func (s *AccountService) GetAccountAndSubAccountsByAccountId(c core.Context, uid int64, fundId int64, accountId int64) ([]*models.Account, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if accountId <= 0 {
@@ -90,15 +106,19 @@ func (s *AccountService) GetAccountAndSubAccountsByAccountId(c core.Context, uid
 	}
 
 	var accounts []*models.Account
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=? AND (account_id=? OR parent_account_id=?)", uid, false, accountId, accountId).OrderBy("parent_account_id asc, display_order asc").Find(&accounts)
+	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=? AND (account_id=? OR parent_account_id=?)", uid, fundId, false, accountId, accountId).OrderBy("parent_account_id asc, display_order asc").Find(&accounts)
 
 	return accounts, err
 }
 
 // GetSubAccountsByAccountId returns sub-account models according to account id
-func (s *AccountService) GetSubAccountsByAccountId(c core.Context, uid int64, accountId int64) ([]*models.Account, error) {
+func (s *AccountService) GetSubAccountsByAccountId(c core.Context, uid int64, fundId int64, accountId int64) ([]*models.Account, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if accountId <= 0 {
@@ -106,24 +126,29 @@ func (s *AccountService) GetSubAccountsByAccountId(c core.Context, uid int64, ac
 	}
 
 	var accounts []*models.Account
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=? AND parent_account_id=?", uid, false, accountId).OrderBy("display_order asc").Find(&accounts)
+	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=? AND parent_account_id=?", uid, fundId, false, accountId).OrderBy("display_order asc").Find(&accounts)
 
 	return accounts, err
 }
 
 // GetSubAccountsByAccountIds returns sub-account models according to account ids
-func (s *AccountService) GetSubAccountsByAccountIds(c core.Context, uid int64, accountIds []int64) ([]*models.Account, error) {
+func (s *AccountService) GetSubAccountsByAccountIds(c core.Context, uid int64, fundId int64, accountIds []int64) ([]*models.Account, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if len(accountIds) <= 0 {
 		return nil, errs.ErrAccountIdInvalid
 	}
 
-	condition := "uid=? AND deleted=?"
-	conditionParams := make([]any, 0, len(accountIds)+2)
+	condition := "uid=? AND fund_id=? AND deleted=?"
+	conditionParams := make([]any, 0, len(accountIds)+3)
 	conditionParams = append(conditionParams, uid)
+	conditionParams = append(conditionParams, fundId)
 	conditionParams = append(conditionParams, false)
 
 	var accountIdConditions strings.Builder
@@ -154,9 +179,13 @@ func (s *AccountService) GetSubAccountsByAccountIds(c core.Context, uid int64, a
 }
 
 // GetAccountsByAccountIds returns account models according to account ids
-func (s *AccountService) GetAccountsByAccountIds(c core.Context, uid int64, accountIds []int64) (map[int64]*models.Account, error) {
+func (s *AccountService) GetAccountsByAccountIds(c core.Context, uid int64, fundId int64, accountIds []int64) (map[int64]*models.Account, error) {
 	if uid <= 0 {
 		return nil, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return nil, errs.ErrFundIdInvalid
 	}
 
 	if accountIds == nil {
@@ -164,7 +193,7 @@ func (s *AccountService) GetAccountsByAccountIds(c core.Context, uid int64, acco
 	}
 
 	var accounts []*models.Account
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND deleted=?", uid, false).In("account_id", accountIds).Find(&accounts)
+	err := s.UserDataDB(uid).NewSession(c).Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("account_id", accountIds).Find(&accounts)
 
 	if err != nil {
 		return nil, err
@@ -175,13 +204,17 @@ func (s *AccountService) GetAccountsByAccountIds(c core.Context, uid int64, acco
 }
 
 // GetMaxDisplayOrder returns the max display order according to account category
-func (s *AccountService) GetMaxDisplayOrder(c core.Context, uid int64, category models.AccountCategory) (int32, error) {
+func (s *AccountService) GetMaxDisplayOrder(c core.Context, uid int64, fundId int64, category models.AccountCategory) (int32, error) {
 	if uid <= 0 {
 		return 0, errs.ErrUserIdInvalid
 	}
 
+	if fundId <= 0 {
+		return 0, errs.ErrFundIdInvalid
+	}
+
 	account := &models.Account{}
-	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "deleted", "parent_account_id", "display_order").Where("uid=? AND deleted=? AND parent_account_id=? AND category=?", uid, false, models.LevelOneAccountParentId, category).OrderBy("display_order desc").Limit(1).Get(account)
+	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "fund_id", "deleted", "parent_account_id", "display_order").Where("uid=? AND fund_id=? AND deleted=? AND parent_account_id=? AND category=?", uid, fundId, false, models.LevelOneAccountParentId, category).OrderBy("display_order desc").Limit(1).Get(account)
 
 	if err != nil {
 		return 0, err
@@ -195,9 +228,13 @@ func (s *AccountService) GetMaxDisplayOrder(c core.Context, uid int64, category 
 }
 
 // GetMaxSubAccountDisplayOrder returns the max display order of sub-account according to account category and parent account id
-func (s *AccountService) GetMaxSubAccountDisplayOrder(c core.Context, uid int64, category models.AccountCategory, parentAccountId int64) (int32, error) {
+func (s *AccountService) GetMaxSubAccountDisplayOrder(c core.Context, uid int64, fundId int64, category models.AccountCategory, parentAccountId int64) (int32, error) {
 	if uid <= 0 {
 		return 0, errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return 0, errs.ErrFundIdInvalid
 	}
 
 	if parentAccountId <= 0 {
@@ -205,7 +242,7 @@ func (s *AccountService) GetMaxSubAccountDisplayOrder(c core.Context, uid int64,
 	}
 
 	account := &models.Account{}
-	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "deleted", "parent_account_id", "display_order").Where("uid=? AND deleted=? AND parent_account_id=? AND category=?", uid, false, parentAccountId, category).OrderBy("display_order desc").Limit(1).Get(account)
+	has, err := s.UserDataDB(uid).NewSession(c).Cols("uid", "fund_id", "deleted", "parent_account_id", "display_order").Where("uid=? AND fund_id=? AND deleted=? AND parent_account_id=? AND category=?", uid, fundId, false, parentAccountId, category).OrderBy("display_order desc").Limit(1).Get(account)
 
 	if err != nil {
 		return 0, err
@@ -222,6 +259,10 @@ func (s *AccountService) GetMaxSubAccountDisplayOrder(c core.Context, uid int64,
 func (s *AccountService) CreateAccounts(c core.Context, mainAccount *models.Account, mainAccountBalanceTime int64, childrenAccounts []*models.Account, childrenAccountBalanceTimes []int64, utcOffset int16) error {
 	if mainAccount.Uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if mainAccount.FundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	needAccountUuidCount := uint16(len(childrenAccounts) + 1)
@@ -245,6 +286,7 @@ func (s *AccountService) CreateAccounts(c core.Context, mainAccount *models.Acco
 			childAccount.AccountId = accountUuids[i+1]
 			childAccount.ParentAccountId = mainAccount.AccountId
 			childAccount.Uid = mainAccount.Uid
+			childAccount.FundId = mainAccount.FundId
 			childAccount.Type = models.ACCOUNT_TYPE_SINGLE_ACCOUNT
 
 			allAccounts[i+1] = childrenAccounts[i]
@@ -278,6 +320,7 @@ func (s *AccountService) CreateAccounts(c core.Context, mainAccount *models.Acco
 			newTransaction := &models.Transaction{
 				TransactionId:        transactionId,
 				Uid:                  allAccounts[i].Uid,
+				FundId:               allAccounts[i].FundId,
 				Deleted:              false,
 				Type:                 models.TRANSACTION_DB_TYPE_MODIFY_BALANCE,
 				TransactionTime:      transactionTime,
@@ -371,6 +414,10 @@ func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Acco
 		return errs.ErrUserIdInvalid
 	}
 
+	if mainAccount.FundId <= 0 {
+		return errs.ErrFundIdInvalid
+	}
+
 	needAccountUuidCount := uint16(len(addSubAccounts))
 	newAccountUuids := s.GenerateUuids(uuid.UUID_TYPE_ACCOUNT, needAccountUuidCount)
 
@@ -394,6 +441,7 @@ func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Acco
 			childAccount.AccountId = newAccountUuids[i]
 			childAccount.ParentAccountId = mainAccount.AccountId
 			childAccount.Uid = mainAccount.Uid
+			childAccount.FundId = mainAccount.FundId
 			childAccount.Type = models.ACCOUNT_TYPE_SINGLE_ACCOUNT
 			childAccount.Deleted = false
 			childAccount.CreatedUnixTime = now
@@ -417,6 +465,7 @@ func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Acco
 				newTransaction := &models.Transaction{
 					TransactionId:        transactionId,
 					Uid:                  childAccount.Uid,
+					FundId:               childAccount.FundId,
 					Deleted:              false,
 					Type:                 models.TRANSACTION_DB_TYPE_MODIFY_BALANCE,
 					TransactionTime:      transactionTime,
@@ -440,7 +489,9 @@ func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Acco
 		// update accounts
 		for i := 0; i < len(updateAccounts); i++ {
 			account := updateAccounts[i]
-			updatedRows, err := sess.ID(account.AccountId).Cols("name", "category", "icon", "color", "comment", "extend", "hidden", "updated_unix_time").Where("uid=? AND deleted=?", account.Uid, false).Update(account)
+			fmt.Println(account.FundId)
+			updatedRows, err := sess.ID(account.AccountId).Cols("name", "category", "icon", "color", "comment", "extend", "hidden", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", account.Uid, account.FundId, false).Update(account)
+			fmt.Println("update row ", updatedRows)
 
 			if err != nil {
 				return err
@@ -517,14 +568,14 @@ func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Acco
 
 		// remove sub accounts
 		if len(removeSubAccountIds) > 0 {
-			subAccountsCount, err := sess.Where("uid=? AND deleted=? AND parent_account_id=?", mainAccount.Uid, false, mainAccount.AccountId).Count(&models.Account{})
+			subAccountsCount, err := sess.Where("uid=? AND fund_id=? AND deleted=? AND parent_account_id=?", mainAccount.Uid, mainAccount.FundId, false, mainAccount.AccountId).Count(&models.Account{})
 
 			if subAccountsCount <= int64(len(removeSubAccountIds)) {
 				return errs.ErrAccountHaveNoSubAccount
 			}
 
 			var relatedTransactionsByAccount []*models.Transaction
-			err = sess.Cols("transaction_id", "uid", "deleted", "account_id", "type").Where("uid=? AND deleted=?", mainAccount.Uid, false).In("account_id", removeSubAccountIds).Limit(len(removeSubAccountIds) + 1).Find(&relatedTransactionsByAccount)
+			err = sess.Cols("transaction_id", "uid", "fund_id", "deleted", "account_id", "type").Where("uid=? AND fund_id=? AND deleted=?", mainAccount.Uid, mainAccount.FundId, false).In("account_id", removeSubAccountIds).Limit(len(removeSubAccountIds) + 1).Find(&relatedTransactionsByAccount)
 
 			if err != nil {
 				return err
@@ -552,7 +603,7 @@ func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Acco
 				DeletedUnixTime: now,
 			}
 
-			deletedRows, err := sess.Cols("balance", "deleted", "deleted_unix_time").Where("uid=? AND deleted=?", mainAccount.Uid, false).In("account_id", removeSubAccountIds).Update(deleteAccountUpdateModel)
+			deletedRows, err := sess.Cols("balance", "deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=?", mainAccount.Uid, mainAccount.FundId, false).In("account_id", removeSubAccountIds).Update(deleteAccountUpdateModel)
 
 			if err != nil {
 				return err
@@ -572,7 +623,7 @@ func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Acco
 					transactionIds[i] = relatedTransactionsByAccount[i].TransactionId
 				}
 
-				deletedTransactionRows, err := sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND deleted=?", mainAccount.Uid, false).In("transaction_id", transactionIds).Update(updateTransaction)
+				deletedTransactionRows, err := sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=?", mainAccount.Uid, mainAccount.FundId, false).In("transaction_id", transactionIds).Update(updateTransaction)
 
 				if err != nil {
 					return err
@@ -588,9 +639,13 @@ func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Acco
 }
 
 // HideAccount updates hidden field of given accounts
-func (s *AccountService) HideAccount(c core.Context, uid int64, ids []int64, hidden bool) error {
+func (s *AccountService) HideAccount(c core.Context, uid int64, fundId int64, ids []int64, hidden bool) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	now := time.Now().Unix()
@@ -601,7 +656,7 @@ func (s *AccountService) HideAccount(c core.Context, uid int64, ids []int64, hid
 	}
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
-		updatedRows, err := sess.Cols("hidden", "updated_unix_time").Where("uid=? AND deleted=?", uid, false).In("account_id", ids).Update(updateModel)
+		updatedRows, err := sess.Cols("hidden", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("account_id", ids).Update(updateModel)
 
 		if err != nil {
 			return err
@@ -614,9 +669,13 @@ func (s *AccountService) HideAccount(c core.Context, uid int64, ids []int64, hid
 }
 
 // ModifyAccountDisplayOrders updates display order of given accounts
-func (s *AccountService) ModifyAccountDisplayOrders(c core.Context, uid int64, accounts []*models.Account) error {
+func (s *AccountService) ModifyAccountDisplayOrders(c core.Context, uid int64, fundId int64, accounts []*models.Account) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	for i := 0; i < len(accounts); i++ {
@@ -626,7 +685,7 @@ func (s *AccountService) ModifyAccountDisplayOrders(c core.Context, uid int64, a
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
 		for i := 0; i < len(accounts); i++ {
 			account := accounts[i]
-			updatedRows, err := sess.ID(account.AccountId).Cols("display_order", "updated_unix_time").Where("uid=? AND deleted=?", uid, false).Update(account)
+			updatedRows, err := sess.ID(account.AccountId).Cols("display_order", "updated_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).Update(account)
 
 			if err != nil {
 				return err
@@ -640,9 +699,13 @@ func (s *AccountService) ModifyAccountDisplayOrders(c core.Context, uid int64, a
 }
 
 // DeleteAccount deletes an existed account from database
-func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int64) error {
+func (s *AccountService) DeleteAccount(c core.Context, uid int64, fundId int64, accountId int64) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	now := time.Now().Unix()
@@ -655,7 +718,7 @@ func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int6
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
 		var accountAndSubAccounts []*models.Account
-		err := sess.Where("uid=? AND deleted=? AND ((account_id=? AND parent_account_id=?) OR parent_account_id=?)", uid, false, accountId, models.LevelOneAccountParentId, accountId).Find(&accountAndSubAccounts)
+		err := sess.Where("uid=? AND fund_id=? AND deleted=? AND ((account_id=? AND parent_account_id=?) OR parent_account_id=?)", uid, fundId, false, accountId, models.LevelOneAccountParentId, accountId).Find(&accountAndSubAccounts)
 
 		if err != nil {
 			return err
@@ -676,7 +739,7 @@ func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int6
 		}
 
 		var relatedTransactionsByAccount []*models.Transaction
-		err = sess.Cols("transaction_id", "uid", "deleted", "account_id", "type").Where("uid=? AND deleted=?", uid, false).In("account_id", accountAndSubAccountIds).Limit(len(accountAndSubAccounts) + 1).Find(&relatedTransactionsByAccount)
+		err = sess.Cols("transaction_id", "uid", "fund_id", "deleted", "account_id", "type").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("account_id", accountAndSubAccountIds).Limit(len(accountAndSubAccounts) + 1).Find(&relatedTransactionsByAccount)
 
 		if err != nil {
 			return err
@@ -698,9 +761,10 @@ func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int6
 			}
 		}
 
-		transactionTemplateQueryCondition := fmt.Sprintf("uid=? AND deleted=? AND (template_type=? OR (template_type=? AND scheduled_frequency_type<>? AND (scheduled_end_time IS NULL OR scheduled_end_time>=?))) AND (account_id IN (%s) OR related_account_id IN (%s))", accountAndSubAccountIdsConditions.String(), accountAndSubAccountIdsConditions.String())
-		transactionTemplateQueryConditionParams := make([]any, 0, len(accountAndSubAccountIds)*2+6)
+		transactionTemplateQueryCondition := fmt.Sprintf("uid=? AND fund_id=? AND deleted=? AND (template_type=? OR (template_type=? AND scheduled_frequency_type<>? AND (scheduled_end_time IS NULL OR scheduled_end_time>=?))) AND (account_id IN (%s) OR related_account_id IN (%s))", accountAndSubAccountIdsConditions.String(), accountAndSubAccountIdsConditions.String())
+		transactionTemplateQueryConditionParams := make([]any, 0, len(accountAndSubAccountIds)*2+7)
 		transactionTemplateQueryConditionParams = append(transactionTemplateQueryConditionParams, uid)
+		transactionTemplateQueryConditionParams = append(transactionTemplateQueryConditionParams, fundId)
 		transactionTemplateQueryConditionParams = append(transactionTemplateQueryConditionParams, false)
 		transactionTemplateQueryConditionParams = append(transactionTemplateQueryConditionParams, models.TRANSACTION_TEMPLATE_TYPE_NORMAL)
 		transactionTemplateQueryConditionParams = append(transactionTemplateQueryConditionParams, models.TRANSACTION_TEMPLATE_TYPE_SCHEDULE)
@@ -715,7 +779,7 @@ func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int6
 			transactionTemplateQueryConditionParams = append(transactionTemplateQueryConditionParams, accountAndSubAccountIds[i])
 		}
 
-		exists, err := sess.Cols("uid", "deleted", "account_id", "related_account_id", "template_type", "scheduled_frequency_type", "scheduled_end_time").Where(transactionTemplateQueryCondition, transactionTemplateQueryConditionParams...).Limit(1).Exist(&models.TransactionTemplate{})
+		exists, err := sess.Cols("uid", "fund_id", "deleted", "account_id", "related_account_id", "template_type", "scheduled_frequency_type", "scheduled_end_time").Where(transactionTemplateQueryCondition, transactionTemplateQueryConditionParams...).Limit(1).Exist(&models.TransactionTemplate{})
 
 		if err != nil {
 			return err
@@ -723,7 +787,7 @@ func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int6
 			return errs.ErrAccountInUseCannotBeDeleted
 		}
 
-		deletedRows, err := sess.Cols("balance", "deleted", "deleted_unix_time").Where("uid=? AND deleted=?", uid, false).In("account_id", accountAndSubAccountIds).Update(updateModel)
+		deletedRows, err := sess.Cols("balance", "deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("account_id", accountAndSubAccountIds).Update(updateModel)
 
 		if err != nil {
 			return err
@@ -743,7 +807,7 @@ func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int6
 				transactionIds[i] = relatedTransactionsByAccount[i].TransactionId
 			}
 
-			deletedTransactionRows, err := sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND deleted=?", uid, false).In("transaction_id", transactionIds).Update(updateTransaction)
+			deletedTransactionRows, err := sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("transaction_id", transactionIds).Update(updateTransaction)
 
 			if err != nil {
 				return err
@@ -758,9 +822,13 @@ func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int6
 }
 
 // DeleteSubAccount deletes an existed sub-account from database
-func (s *AccountService) DeleteSubAccount(c core.Context, uid int64, accountId int64) error {
+func (s *AccountService) DeleteSubAccount(c core.Context, uid int64, fundId int64, accountId int64) error {
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
+	}
+
+	if fundId <= 0 {
+		return errs.ErrFundIdInvalid
 	}
 
 	now := time.Now().Unix()
@@ -773,7 +841,7 @@ func (s *AccountService) DeleteSubAccount(c core.Context, uid int64, accountId i
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
 		account := &models.Account{}
-		has, err := sess.Cols("account_id", "uid", "deleted", "parent_account_id").Where("uid=? AND deleted=? AND account_id=? AND parent_account_id<>?", uid, false, accountId, models.LevelOneAccountParentId).Limit(1).Get(account)
+		has, err := sess.Cols("account_id", "uid", "fund_id", "deleted", "parent_account_id").Where("uid=? AND fund_id=? AND deleted=? AND account_id=? AND parent_account_id<>?", uid, fundId, false, accountId, models.LevelOneAccountParentId).Limit(1).Get(account)
 
 		if err != nil {
 			return err
@@ -781,14 +849,14 @@ func (s *AccountService) DeleteSubAccount(c core.Context, uid int64, accountId i
 			return errs.ErrSubAccountNotFound
 		}
 
-		subAccountsCount, err := sess.Where("uid=? AND deleted=? AND parent_account_id=?", uid, false, account.ParentAccountId).Count(&models.Account{})
+		subAccountsCount, err := sess.Where("uid=? AND fund_id=? AND deleted=? AND parent_account_id=?", uid, fundId, false, account.ParentAccountId).Count(&models.Account{})
 
 		if subAccountsCount <= 1 {
 			return errs.ErrAccountHaveNoSubAccount
 		}
 
 		var relatedTransactionsByAccount []*models.Transaction
-		err = sess.Cols("transaction_id", "uid", "deleted", "account_id", "type").Where("uid=? AND deleted=? AND account_id=?", uid, false, accountId).Limit(2).Find(&relatedTransactionsByAccount)
+		err = sess.Cols("transaction_id", "uid", "fund_id", "deleted", "account_id", "type").Where("uid=? AND fund_id=? AND deleted=? AND account_id=?", uid, fundId, false, accountId).Limit(2).Find(&relatedTransactionsByAccount)
 
 		if err != nil {
 			return err
@@ -804,7 +872,7 @@ func (s *AccountService) DeleteSubAccount(c core.Context, uid int64, accountId i
 			}
 		}
 
-		exists, err := sess.Cols("uid", "deleted", "account_id", "related_account_id", "template_type", "scheduled_frequency_type", "scheduled_end_time").Where("uid=? AND deleted=? AND (template_type=? OR (template_type=? AND scheduled_frequency_type<>? AND (scheduled_end_time IS NULL OR scheduled_end_time>=?))) AND (account_id=? OR related_account_id=?)", uid, false, models.TRANSACTION_TEMPLATE_TYPE_NORMAL, models.TRANSACTION_TEMPLATE_TYPE_SCHEDULE, models.TRANSACTION_SCHEDULE_FREQUENCY_TYPE_DISABLED, now, accountId, accountId).Limit(1).Exist(&models.TransactionTemplate{})
+		exists, err := sess.Cols("uid", "fund_id", "deleted", "account_id", "related_account_id", "template_type", "scheduled_frequency_type", "scheduled_end_time").Where("uid=? AND fund_id=? AND deleted=? AND (template_type=? OR (template_type=? AND scheduled_frequency_type<>? AND (scheduled_end_time IS NULL OR scheduled_end_time>=?))) AND (account_id=? OR related_account_id=?)", uid, fundId, false, models.TRANSACTION_TEMPLATE_TYPE_NORMAL, models.TRANSACTION_TEMPLATE_TYPE_SCHEDULE, models.TRANSACTION_SCHEDULE_FREQUENCY_TYPE_DISABLED, now, accountId, accountId).Limit(1).Exist(&models.TransactionTemplate{})
 
 		if err != nil {
 			return err
@@ -812,7 +880,7 @@ func (s *AccountService) DeleteSubAccount(c core.Context, uid int64, accountId i
 			return errs.ErrSubAccountInUseCannotBeDeleted
 		}
 
-		deletedRows, err := sess.Cols("balance", "deleted", "deleted_unix_time").Where("uid=? AND deleted=? AND account_id=?", uid, false, accountId).Update(updateModel)
+		deletedRows, err := sess.Cols("balance", "deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=? AND account_id=?", uid, fundId, false, accountId).Update(updateModel)
 
 		if err != nil {
 			return err
@@ -832,7 +900,7 @@ func (s *AccountService) DeleteSubAccount(c core.Context, uid int64, accountId i
 				transactionIds[i] = relatedTransactionsByAccount[i].TransactionId
 			}
 
-			deletedTransactionRows, err := sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND deleted=?", uid, false).In("transaction_id", transactionIds).Update(updateTransaction)
+			deletedTransactionRows, err := sess.Cols("deleted", "deleted_unix_time").Where("uid=? AND fund_id=? AND deleted=?", uid, fundId, false).In("transaction_id", transactionIds).Update(updateTransaction)
 
 			if err != nil {
 				return err
@@ -889,7 +957,7 @@ func (s *AccountService) GetAccountNames(accounts []*models.Account) []string {
 }
 
 // GetAccountOrSubAccountIds returns a list of account ids or sub-account ids according to given account ids
-func (s *AccountService) GetAccountOrSubAccountIds(c core.Context, accountIds string, uid int64) ([]int64, error) {
+func (s *AccountService) GetAccountOrSubAccountIds(c core.Context, accountIds string, uid int64, fundId int64) ([]int64, error) {
 	if accountIds == "" || accountIds == "0" {
 		return nil, nil
 	}
@@ -903,7 +971,7 @@ func (s *AccountService) GetAccountOrSubAccountIds(c core.Context, accountIds st
 	var allAccountIds []int64
 
 	if len(requestAccountIds) > 0 {
-		allSubAccounts, err := s.GetSubAccountsByAccountIds(c, uid, requestAccountIds)
+		allSubAccounts, err := s.GetSubAccountsByAccountIds(c, uid, fundId, requestAccountIds)
 
 		if err != nil {
 			return nil, err

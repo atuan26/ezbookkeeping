@@ -29,9 +29,10 @@ const (
 // TransactionTemplate represents transaction template stored in database
 type TransactionTemplate struct {
 	TemplateId                 int64                            `xorm:"PK"`
-	Uid                        int64                            `xorm:"INDEX(IDX_transaction_template_uid_deleted_template_type_order) NOT NULL"`
-	Deleted                    bool                             `xorm:"INDEX(IDX_transaction_template_uid_deleted_template_type_order) INDEX(IDX_transaction_template_deleted_type_freqtype_scheduled_time) NOT NULL"`
-	TemplateType               TransactionTemplateType          `xorm:"INDEX(IDX_transaction_template_uid_deleted_template_type_order) INDEX(IDX_transaction_template_deleted_type_freqtype_scheduled_time) NOT NULL"`
+	Uid                        int64                            `xorm:"INDEX(IDX_transaction_template_fund_uid_deleted_template_type_order) NOT NULL"`
+	FundId                     int64                            `xorm:"INDEX(IDX_transaction_template_fund_uid_deleted_template_type_order) NOT NULL"`
+	Deleted                    bool                             `xorm:"INDEX(IDX_transaction_template_fund_uid_deleted_template_type_order) INDEX(IDX_transaction_template_deleted_type_freqtype_scheduled_time) NOT NULL"`
+	TemplateType               TransactionTemplateType          `xorm:"INDEX(IDX_transaction_template_fund_uid_deleted_template_type_order) INDEX(IDX_transaction_template_deleted_type_freqtype_scheduled_time) NOT NULL"`
 	Name                       string                           `xorm:"VARCHAR(64) NOT NULL"`
 	Type                       TransactionType                  `xorm:"NOT NULL"`
 	CategoryId                 int64                            `xorm:"NOT NULL"`
@@ -198,7 +199,7 @@ func (t *TransactionTemplate) ToTransactionTemplateInfoResponse(serverUtcOffset 
 }
 
 func (t *TransactionTemplate) toTransactionInfoResponse(utcOffset int16) *TransactionInfoResponse {
-	tagIds := make([]string, 0, 0)
+	tagIds := make([]string, 0)
 
 	if t.TagIds != "" {
 		tagIds = strings.Split(t.TagIds, ",")

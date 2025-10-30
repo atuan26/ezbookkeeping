@@ -60,10 +60,6 @@ export const useUserStore = defineStore('user', () => {
         return userInfo.language;
     });
 
-    const currentUserDefaultCurrency = computed<string>(() => {
-        const userInfo = currentUserBasicInfo.value || EMPTY_USER_BASIC_INFO;
-        return userInfo.defaultCurrency || settingsStore.localeDefaultSettings.currency;
-    });
 
     const currentUserFirstDayOfWeek = computed<WeekDayValue>(() => {
         const userInfo = currentUserBasicInfo.value || EMPTY_USER_BASIC_INFO;
@@ -432,7 +428,6 @@ export const useUserStore = defineStore('user', () => {
         currentUserAvatar,
         currentUserDefaultAccountId,
         currentUserLanguage,
-        currentUserDefaultCurrency,
         currentUserFirstDayOfWeek,
         currentUserFiscalYearStart,
         currentUserCalendarDisplayType,

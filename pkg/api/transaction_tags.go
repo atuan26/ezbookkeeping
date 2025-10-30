@@ -25,7 +25,14 @@ var (
 // TagListHandler returns transaction tag list of current user
 func (a *TransactionTagsApi) TagListHandler(c *core.WebContext) (any, *errs.Error) {
 	uid := c.GetCurrentUid()
-	tags, err := a.tags.GetAllTagsByUid(c, uid)
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	tags, err := a.tags.GetAllTagsByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_tags.TagListHandler] failed to get tags for user \"uid:%d\", because %s", uid, err.Error())
@@ -54,7 +61,14 @@ func (a *TransactionTagsApi) TagGetHandler(c *core.WebContext) (any, *errs.Error
 	}
 
 	uid := c.GetCurrentUid()
-	tag, err := a.tags.GetTagByTagId(c, uid, tagGetReq.Id)
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	tag, err := a.tags.GetTagByTagId(c, uid, fundId, tagGetReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_tags.TagGetHandler] failed to get tag \"id:%d\" for user \"uid:%d\", because %s", tagGetReq.Id, uid, err.Error())
@@ -78,14 +92,20 @@ func (a *TransactionTagsApi) TagCreateHandler(c *core.WebContext) (any, *errs.Er
 
 	uid := c.GetCurrentUid()
 
-	maxOrderId, err := a.tags.GetMaxDisplayOrder(c, uid)
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	maxOrderId, err := a.tags.GetMaxDisplayOrder(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_tags.TagCreateHandler] failed to get max display order for user \"uid:%d\", because %s", uid, err.Error())
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
-	tag := a.createNewTagModel(uid, &tagCreateReq, maxOrderId+1)
+	tag := a.createNewTagModel(uid, fundId, &tagCreateReq, maxOrderId+1)
 
 	err = a.tags.CreateTag(c, tag)
 
@@ -113,16 +133,22 @@ func (a *TransactionTagsApi) TagCreateBatchHandler(c *core.WebContext) (any, *er
 
 	uid := c.GetCurrentUid()
 
-	maxOrderId, err := a.tags.GetMaxDisplayOrder(c, uid)
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	maxOrderId, err := a.tags.GetMaxDisplayOrder(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_tags.TagCreateBatchHandler] failed to get max display order for user \"uid:%d\", because %s", uid, err.Error())
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
-	tags := a.createNewTagModels(uid, &tagCreateBatchReq, maxOrderId+1)
+	tags := a.createNewTagModels(uid, fundId, &tagCreateBatchReq, maxOrderId+1)
 
-	err = a.tags.CreateTags(c, uid, tags, tagCreateBatchReq.SkipExists)
+	err = a.tags.CreateTags(c, uid, fundId, tags, tagCreateBatchReq.SkipExists)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_tags.TagCreateBatchHandler] failed to create tags for user \"uid:%d\", because %s", uid, err.Error())
@@ -153,7 +179,14 @@ func (a *TransactionTagsApi) TagModifyHandler(c *core.WebContext) (any, *errs.Er
 	}
 
 	uid := c.GetCurrentUid()
-	tag, err := a.tags.GetTagByTagId(c, uid, tagModifyReq.Id)
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	tag, err := a.tags.GetTagByTagId(c, uid, fundId, tagModifyReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_tags.TagModifyHandler] failed to get tag \"id:%d\" for user \"uid:%d\", because %s", tagModifyReq.Id, uid, err.Error())
@@ -196,7 +229,14 @@ func (a *TransactionTagsApi) TagHideHandler(c *core.WebContext) (any, *errs.Erro
 	}
 
 	uid := c.GetCurrentUid()
-	err = a.tags.HideTag(c, uid, []int64{tagHideReq.Id}, tagHideReq.Hidden)
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	err = a.tags.HideTag(c, uid, fundId, []int64{tagHideReq.Id}, tagHideReq.Hidden)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_tags.TagHideHandler] failed to hide tag \"id:%d\" for user \"uid:%d\", because %s", tagHideReq.Id, uid, err.Error())
@@ -218,12 +258,20 @@ func (a *TransactionTagsApi) TagMoveHandler(c *core.WebContext) (any, *errs.Erro
 	}
 
 	uid := c.GetCurrentUid()
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
 	tags := make([]*models.TransactionTag, len(tagMoveReq.NewDisplayOrders))
 
 	for i := 0; i < len(tagMoveReq.NewDisplayOrders); i++ {
 		newDisplayOrder := tagMoveReq.NewDisplayOrders[i]
 		tag := &models.TransactionTag{
 			Uid:          uid,
+			FundId:       fundId,
 			TagId:        newDisplayOrder.Id,
 			DisplayOrder: newDisplayOrder.DisplayOrder,
 		}
@@ -231,7 +279,7 @@ func (a *TransactionTagsApi) TagMoveHandler(c *core.WebContext) (any, *errs.Erro
 		tags[i] = tag
 	}
 
-	err = a.tags.ModifyTagDisplayOrders(c, uid, tags)
+	err = a.tags.ModifyTagDisplayOrders(c, uid, fundId, tags)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_tags.TagMoveHandler] failed to move tags for user \"uid:%d\", because %s", uid, err.Error())
@@ -253,7 +301,14 @@ func (a *TransactionTagsApi) TagDeleteHandler(c *core.WebContext) (any, *errs.Er
 	}
 
 	uid := c.GetCurrentUid()
-	err = a.tags.DeleteTag(c, uid, tagDeleteReq.Id)
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	err = a.tags.DeleteTag(c, uid, fundId, tagDeleteReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[transaction_tags.TagDeleteHandler] failed to delete tag \"id:%d\" for user \"uid:%d\", because %s", tagDeleteReq.Id, uid, err.Error())
@@ -264,20 +319,21 @@ func (a *TransactionTagsApi) TagDeleteHandler(c *core.WebContext) (any, *errs.Er
 	return true, nil
 }
 
-func (a *TransactionTagsApi) createNewTagModel(uid int64, tagCreateReq *models.TransactionTagCreateRequest, order int32) *models.TransactionTag {
+func (a *TransactionTagsApi) createNewTagModel(uid int64, fundId int64, tagCreateReq *models.TransactionTagCreateRequest, order int32) *models.TransactionTag {
 	return &models.TransactionTag{
 		Uid:          uid,
+		FundId:       fundId,
 		Name:         tagCreateReq.Name,
 		DisplayOrder: order,
 	}
 }
 
-func (a *TransactionTagsApi) createNewTagModels(uid int64, tagCreateBatchReq *models.TransactionTagCreateBatchRequest, order int32) []*models.TransactionTag {
+func (a *TransactionTagsApi) createNewTagModels(uid int64, fundId int64, tagCreateBatchReq *models.TransactionTagCreateBatchRequest, order int32) []*models.TransactionTag {
 	tags := make([]*models.TransactionTag, len(tagCreateBatchReq.Tags))
 
 	for i := 0; i < len(tagCreateBatchReq.Tags); i++ {
 		tagCreateReq := tagCreateBatchReq.Tags[i]
-		tag := a.createNewTagModel(uid, tagCreateReq, order+int32(i))
+		tag := a.createNewTagModel(uid, fundId, tagCreateReq, order+int32(i))
 		tags[i] = tag
 	}
 

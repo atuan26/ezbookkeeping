@@ -199,7 +199,6 @@ import { ref, computed, useTemplateRef, watch } from 'vue';
 import { useI18n } from '@/locales/helpers.ts';
 import { useAccountEditPageBase } from '@/views/base/accounts/AccountEditPageBase.ts';
 
-import { useUserStore } from '@/stores/user.ts';
 import { useAccountsStore } from '@/stores/account.ts';
 
 import { itemAndIndex } from '@/core/base.ts';
@@ -217,6 +216,7 @@ import {
     mdiCreditCardPlusOutline,
     mdiDeleteOutline
 } from '@mdi/js';
+import { useFundsStore } from '@/stores/fund';
 
 interface AccountEditResponse {
     message: string;
@@ -246,7 +246,7 @@ const {
     setAccount
 } = useAccountEditPageBase();
 
-const userStore = useUserStore();
+const fundsStore = useFundsStore();
 const accountsStore = useAccountsStore();
 
 const confirmDialog = useTemplateRef<ConfirmDialogType>('confirmDialog');
@@ -274,7 +274,7 @@ const accountAmountTitle = computed<string>(() => {
 
 const isAccountModified = computed<boolean>(() => {
     if (!editAccountId.value) {
-        return !account.value.equals(Account.createNewAccount(userStore.currentUserDefaultCurrency, account.value.balanceTime ?? getCurrentUnixTime()));
+        return !account.value.equals(Account.createNewAccount(fundsStore.currentCurrency, account.value.balanceTime ?? getCurrentUnixTime()));
     } else {
         return true;
     }
@@ -288,7 +288,7 @@ function open(options?: { id?: string, currentAccount?: Account, category?: numb
     loading.value = true;
     submitting.value = false;
 
-    const newAccount = Account.createNewAccount(userStore.currentUserDefaultCurrency, getCurrentUnixTime());
+    const newAccount = Account.createNewAccount(fundsStore.currentCurrency, getCurrentUnixTime());
     account.value.fillFrom(newAccount);
     subAccounts.value = [];
     currentAccountIndex.value = -1;

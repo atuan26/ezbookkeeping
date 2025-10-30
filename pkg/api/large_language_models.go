@@ -56,6 +56,13 @@ func (a *LargeLanguageModelsApi) RecognizeReceiptImageHandler(c *core.WebContext
 
 	timezone := time.FixedZone("Client Timezone", int(utcOffset)*60)
 	uid := c.GetCurrentUid()
+
+	// Get fundId for the user
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
 	user, err := a.users.GetUserById(c, uid)
 
 	if err != nil {
@@ -118,7 +125,7 @@ func (a *LargeLanguageModelsApi) RecognizeReceiptImageHandler(c *core.WebContext
 		return nil, errs.ErrOperationFailed
 	}
 
-	accounts, err := a.accounts.GetAllAccountsByUid(c, uid)
+	accounts, err := a.accounts.GetAllAccountsByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[large_language_models.RecognizeReceiptImageHandler] failed to get all accounts for user \"uid:%d\", because %s", uid, err.Error())
@@ -136,7 +143,7 @@ func (a *LargeLanguageModelsApi) RecognizeReceiptImageHandler(c *core.WebContext
 		accountNames = append(accountNames, accounts[i].Name)
 	}
 
-	categories, err := a.transactionCategories.GetAllCategoriesByUid(c, uid, 0, -1)
+	categories, err := a.transactionCategories.GetAllCategoriesByUid(c, uid, fundId, 0, -1)
 
 	if err != nil {
 		log.Errorf(c, "[large_language_models.RecognizeReceiptImageHandler] failed to get categories for user \"uid:%d\", because %s", uid, err.Error())
@@ -171,7 +178,7 @@ func (a *LargeLanguageModelsApi) RecognizeReceiptImageHandler(c *core.WebContext
 		}
 	}
 
-	tags, err := a.transactionTags.GetAllTagsByUid(c, uid)
+	tags, err := a.transactionTags.GetAllTagsByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[large_language_models.RecognizeReceiptImageHandler] failed to get tags for user \"uid:%d\", because %s", uid, err.Error())

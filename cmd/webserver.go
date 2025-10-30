@@ -360,7 +360,17 @@ func startWebServer(c *core.CliContext) error {
 				apiV1Route.GET("/data/export.tsv", bindTsv(api.DataManagements.ExportDataToEzbookkeepingTSVHandler))
 			}
 
-			// Accounts
+			// Accounts (with fund context)
+			apiV1Route.GET("/funds/:fundId/accounts/list.json", bindApi(api.Accounts.AccountListHandler))
+			apiV1Route.GET("/funds/:fundId/accounts/get.json", bindApi(api.Accounts.AccountGetHandler))
+			apiV1Route.POST("/funds/:fundId/accounts/add.json", bindApi(api.Accounts.AccountCreateHandler))
+			apiV1Route.POST("/funds/:fundId/accounts/modify.json", bindApi(api.Accounts.AccountModifyHandler))
+			apiV1Route.POST("/funds/:fundId/accounts/hide.json", bindApi(api.Accounts.AccountHideHandler))
+			apiV1Route.POST("/funds/:fundId/accounts/move.json", bindApi(api.Accounts.AccountMoveHandler))
+			apiV1Route.POST("/funds/:fundId/accounts/delete.json", bindApi(api.Accounts.AccountDeleteHandler))
+			apiV1Route.POST("/funds/:fundId/accounts/sub_account/delete.json", bindApi(api.Accounts.SubAccountDeleteHandler))
+
+			// Legacy account routes (for backward compatibility)
 			apiV1Route.GET("/accounts/list.json", bindApi(api.Accounts.AccountListHandler))
 			apiV1Route.GET("/accounts/get.json", bindApi(api.Accounts.AccountGetHandler))
 			apiV1Route.POST("/accounts/add.json", bindApi(api.Accounts.AccountCreateHandler))
@@ -370,7 +380,21 @@ func startWebServer(c *core.CliContext) error {
 			apiV1Route.POST("/accounts/delete.json", bindApi(api.Accounts.AccountDeleteHandler))
 			apiV1Route.POST("/accounts/sub_account/delete.json", bindApi(api.Accounts.SubAccountDeleteHandler))
 
-			// Transactions
+			// Transactions (with fund context)
+			apiV1Route.GET("/funds/:fundId/transactions/count.json", bindApi(api.Transactions.TransactionCountHandler))
+			apiV1Route.GET("/funds/:fundId/transactions/list.json", bindApi(api.Transactions.TransactionListHandler))
+			apiV1Route.GET("/funds/:fundId/transactions/list/by_month.json", bindApi(api.Transactions.TransactionMonthListHandler))
+			apiV1Route.GET("/funds/:fundId/transactions/reconciliation_statements.json", bindApi(api.Transactions.TransactionReconciliationStatementHandler))
+			apiV1Route.GET("/funds/:fundId/transactions/statistics.json", bindApi(api.Transactions.TransactionStatisticsHandler))
+			apiV1Route.GET("/funds/:fundId/transactions/statistics/trends.json", bindApi(api.Transactions.TransactionStatisticsTrendsHandler))
+			apiV1Route.GET("/funds/:fundId/transactions/amounts.json", bindApi(api.Transactions.TransactionAmountsHandler))
+			apiV1Route.GET("/funds/:fundId/transactions/get.json", bindApi(api.Transactions.TransactionGetHandler))
+			apiV1Route.POST("/funds/:fundId/transactions/add.json", bindApi(api.Transactions.TransactionCreateHandler))
+			apiV1Route.POST("/funds/:fundId/transactions/modify.json", bindApi(api.Transactions.TransactionModifyHandler))
+			apiV1Route.POST("/funds/:fundId/transactions/move/all.json", bindApi(api.Transactions.TransactionMoveAllBetweenAccountsHandler))
+			apiV1Route.POST("/funds/:fundId/transactions/delete.json", bindApi(api.Transactions.TransactionDeleteHandler))
+
+			// Legacy transaction routes (for backward compatibility)
 			apiV1Route.GET("/transactions/count.json", bindApi(api.Transactions.TransactionCountHandler))
 			apiV1Route.GET("/transactions/list.json", bindApi(api.Transactions.TransactionListHandler))
 			apiV1Route.GET("/transactions/list/by_month.json", bindApi(api.Transactions.TransactionMonthListHandler))
@@ -397,7 +421,17 @@ func startWebServer(c *core.CliContext) error {
 				apiV1Route.POST("/transaction/pictures/remove_unused.json", bindApi(api.TransactionPictures.TransactionPictureRemoveUnusedHandler))
 			}
 
-			// Transaction Categories
+			// Transaction Categories (with fund context)
+			apiV1Route.GET("/funds/:fundId/transaction/categories/list.json", bindApi(api.TransactionCategories.CategoryListHandler))
+			apiV1Route.GET("/funds/:fundId/transaction/categories/get.json", bindApi(api.TransactionCategories.CategoryGetHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/categories/add.json", bindApi(api.TransactionCategories.CategoryCreateHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/categories/add_batch.json", bindApi(api.TransactionCategories.CategoryCreateBatchHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/categories/modify.json", bindApi(api.TransactionCategories.CategoryModifyHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/categories/hide.json", bindApi(api.TransactionCategories.CategoryHideHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/categories/move.json", bindApi(api.TransactionCategories.CategoryMoveHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/categories/delete.json", bindApi(api.TransactionCategories.CategoryDeleteHandler))
+
+			// Legacy transaction category routes (for backward compatibility)
 			apiV1Route.GET("/transaction/categories/list.json", bindApi(api.TransactionCategories.CategoryListHandler))
 			apiV1Route.GET("/transaction/categories/get.json", bindApi(api.TransactionCategories.CategoryGetHandler))
 			apiV1Route.POST("/transaction/categories/add.json", bindApi(api.TransactionCategories.CategoryCreateHandler))
@@ -407,7 +441,17 @@ func startWebServer(c *core.CliContext) error {
 			apiV1Route.POST("/transaction/categories/move.json", bindApi(api.TransactionCategories.CategoryMoveHandler))
 			apiV1Route.POST("/transaction/categories/delete.json", bindApi(api.TransactionCategories.CategoryDeleteHandler))
 
-			// Transaction Tags
+			// Transaction Tags (with fund context)
+			apiV1Route.GET("/funds/:fundId/transaction/tags/list.json", bindApi(api.TransactionTags.TagListHandler))
+			apiV1Route.GET("/funds/:fundId/transaction/tags/get.json", bindApi(api.TransactionTags.TagGetHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/tags/add.json", bindApi(api.TransactionTags.TagCreateHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/tags/add_batch.json", bindApi(api.TransactionTags.TagCreateBatchHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/tags/modify.json", bindApi(api.TransactionTags.TagModifyHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/tags/hide.json", bindApi(api.TransactionTags.TagHideHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/tags/move.json", bindApi(api.TransactionTags.TagMoveHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/tags/delete.json", bindApi(api.TransactionTags.TagDeleteHandler))
+
+			// Legacy transaction tag routes (for backward compatibility)
 			apiV1Route.GET("/transaction/tags/list.json", bindApi(api.TransactionTags.TagListHandler))
 			apiV1Route.GET("/transaction/tags/get.json", bindApi(api.TransactionTags.TagGetHandler))
 			apiV1Route.POST("/transaction/tags/add.json", bindApi(api.TransactionTags.TagCreateHandler))
@@ -417,7 +461,16 @@ func startWebServer(c *core.CliContext) error {
 			apiV1Route.POST("/transaction/tags/move.json", bindApi(api.TransactionTags.TagMoveHandler))
 			apiV1Route.POST("/transaction/tags/delete.json", bindApi(api.TransactionTags.TagDeleteHandler))
 
-			// Transaction Templates
+			// Transaction Templates (with fund context)
+			apiV1Route.GET("/funds/:fundId/transaction/templates/list.json", bindApi(api.TransactionTemplates.TemplateListHandler))
+			apiV1Route.GET("/funds/:fundId/transaction/templates/get.json", bindApi(api.TransactionTemplates.TemplateGetHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/templates/add.json", bindApi(api.TransactionTemplates.TemplateCreateHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/templates/modify.json", bindApi(api.TransactionTemplates.TemplateModifyHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/templates/hide.json", bindApi(api.TransactionTemplates.TemplateHideHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/templates/move.json", bindApi(api.TransactionTemplates.TemplateMoveHandler))
+			apiV1Route.POST("/funds/:fundId/transaction/templates/delete.json", bindApi(api.TransactionTemplates.TemplateDeleteHandler))
+
+			// Legacy transaction template routes (for backward compatibility)
 			apiV1Route.GET("/transaction/templates/list.json", bindApi(api.TransactionTemplates.TemplateListHandler))
 			apiV1Route.GET("/transaction/templates/get.json", bindApi(api.TransactionTemplates.TemplateGetHandler))
 			apiV1Route.POST("/transaction/templates/add.json", bindApi(api.TransactionTemplates.TemplateCreateHandler))
@@ -432,6 +485,19 @@ func startWebServer(c *core.CliContext) error {
 					apiV1Route.POST("/llm/transactions/recognize_receipt_image.json", bindApi(api.LargeLanguageModels.RecognizeReceiptImageHandler))
 				}
 			}
+
+			// Funds
+			apiV1Route.GET("/funds/list.json", bindApi(api.Funds.FundListHandler))
+			apiV1Route.GET("/funds/:fundId/get.json", bindApi(api.Funds.FundGetHandler))
+			apiV1Route.POST("/funds/add.json", bindApi(api.Funds.FundCreateHandler))
+			apiV1Route.POST("/funds/:fundId/modify.json", bindApi(api.Funds.FundModifyHandler))
+			apiV1Route.POST("/funds/:fundId/delete.json", bindApi(api.Funds.FundDeleteHandler))
+
+			// Fund Members
+			apiV1Route.GET("/funds/:fundId/members/list.json", bindApi(api.Funds.FundMemberListHandler))
+			apiV1Route.POST("/funds/:fundId/members/add.json", bindApi(api.Funds.FundMemberCreateHandler))
+			apiV1Route.POST("/funds/:fundId/members/delete.json", bindApi(api.Funds.FundMemberDeleteHandler))
+			apiV1Route.POST("/funds/:fundId/members/link.json", bindApi(api.Funds.FundMemberLinkHandler))
 
 			// Exchange Rates
 			apiV1Route.GET("/exchange_rates/latest.json", bindApi(api.ExchangeRates.LatestExchangeRateHandler))

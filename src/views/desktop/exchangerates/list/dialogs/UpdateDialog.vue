@@ -69,7 +69,6 @@ import { ref, useTemplateRef } from 'vue';
 
 import { useI18n } from '@/locales/helpers.ts';
 
-import { useUserStore } from '@/stores/user.ts';
 import { useExchangeRatesStore } from '@/stores/exchangeRates.ts';
 
 import {
@@ -80,6 +79,7 @@ import {
 import {
     mdiSwapVertical
 } from '@mdi/js';
+import { useFundsStore } from '@/stores/fund';
 
 interface UserCustomExchangeRateUpdateResponse {
     message: string;
@@ -93,14 +93,14 @@ defineProps<{
 
 const { tt } = useI18n();
 
-const userStore = useUserStore();
+const fundsStore = useFundsStore();
 const exchangeRatesStore = useExchangeRatesStore();
 
 const showState = ref<boolean>(false);
 const submitting = ref<boolean>(false);
-const defaultCurrency = ref<string>(userStore.currentUserDefaultCurrency);
+const defaultCurrency = ref<string>(fundsStore.currentCurrency);
 const defaultCurrencyAmount = ref<number>(1);
-const currency = ref<string>(userStore.currentUserDefaultCurrency);
+const currency = ref<string>(fundsStore.currentCurrency);
 const targetCurrencyAmount = ref<number>(1);
 
 const snackbar = useTemplateRef<SnackBarType>('snackbar');
@@ -111,7 +111,7 @@ let rejectFunc: ((reason?: unknown) => void) | null = null;
 function open(): Promise<UserCustomExchangeRateUpdateResponse> {
     showState.value = true;
     defaultCurrencyAmount.value = 1;
-    currency.value = userStore.currentUserDefaultCurrency;
+    currency.value = fundsStore.currentCurrency;
     targetCurrencyAmount.value = 1;
 
     return new Promise((resolve, reject) => {

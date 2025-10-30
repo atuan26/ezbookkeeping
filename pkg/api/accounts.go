@@ -48,7 +48,14 @@ func (a *AccountsApi) AccountListHandler(c *core.WebContext) (any, *errs.Error) 
 	}
 
 	uid := c.GetCurrentUid()
-	accounts, err := a.accounts.GetAllAccountsByUid(c, uid)
+
+	// Get fundId from URL parameter or use default personal fund
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	accounts, err := a.accounts.GetAllAccountsByUid(c, uid, fundId)
 
 	if err != nil {
 		log.Errorf(c, "[accounts.AccountListHandler] failed to get all accounts for user \"uid:%d\", because %s", uid, err.Error())
@@ -108,7 +115,14 @@ func (a *AccountsApi) AccountGetHandler(c *core.WebContext) (any, *errs.Error) {
 	}
 
 	uid := c.GetCurrentUid()
-	accountAndSubAccounts, err := a.accounts.GetAccountAndSubAccountsByAccountId(c, uid, accountGetReq.Id)
+
+	// Get fundId from URL parameter or use default personal fund
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	accountAndSubAccounts, err := a.accounts.GetAccountAndSubAccountsByAccountId(c, uid, fundId, accountGetReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[accounts.AccountGetHandler] failed to get account \"id:%d\" for user \"uid:%d\", because %s", accountGetReq.Id, uid, err.Error())
@@ -232,15 +246,22 @@ func (a *AccountsApi) AccountCreateHandler(c *core.WebContext) (any, *errs.Error
 	}
 
 	uid := c.GetCurrentUid()
-	maxOrderId, err := a.accounts.GetMaxDisplayOrder(c, uid, accountCreateReq.Category)
+
+	// Get fundId from URL parameter or use default personal fund
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	maxOrderId, err := a.accounts.GetMaxDisplayOrder(c, uid, fundId, accountCreateReq.Category)
 
 	if err != nil {
 		log.Errorf(c, "[accounts.AccountCreateHandler] failed to get max display order for user \"uid:%d\", because %s", uid, err.Error())
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
-	mainAccount := a.createNewAccountModel(uid, &accountCreateReq, false, maxOrderId+1)
-	childrenAccounts, childrenAccountBalanceTimes := a.createSubAccountModels(uid, &accountCreateReq)
+	mainAccount := a.createNewAccountModel(uid, fundId, &accountCreateReq, false, maxOrderId+1)
+	childrenAccounts, childrenAccountBalanceTimes := a.createSubAccountModels(uid, fundId, &accountCreateReq)
 
 	if a.CurrentConfig().EnableDuplicateSubmissionsCheck && accountCreateReq.ClientSessionId != "" {
 		found, remark := a.GetSubmissionRemark(duplicatechecker.DUPLICATE_CHECKER_TYPE_NEW_ACCOUNT, uid, accountCreateReq.ClientSessionId)
@@ -250,7 +271,13 @@ func (a *AccountsApi) AccountCreateHandler(c *core.WebContext) (any, *errs.Error
 			accountId, err := utils.StringToInt64(remark)
 
 			if err == nil {
-				accountAndSubAccounts, err := a.accounts.GetAccountAndSubAccountsByAccountId(c, uid, accountId)
+				// Get fundId for this account lookup
+				fundId, fundErr := GetFundIdFromContext(c, uid)
+				if fundErr != nil {
+					return nil, fundErr
+				}
+
+				accountAndSubAccounts, err := a.accounts.GetAccountAndSubAccountsByAccountId(c, uid, fundId, accountId)
 
 				if err != nil {
 					log.Errorf(c, "[accounts.AccountCreateHandler] failed to get existed account \"id:%d\" for user \"uid:%d\", because %s", accountId, uid, err.Error())
@@ -333,7 +360,14 @@ func (a *AccountsApi) AccountModifyHandler(c *core.WebContext) (any, *errs.Error
 	}
 
 	uid := c.GetCurrentUid()
-	accountAndSubAccounts, err := a.accounts.GetAccountAndSubAccountsByAccountId(c, uid, accountModifyReq.Id)
+
+	// Get fundId from URL parameter or use default personal fund
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	accountAndSubAccounts, err := a.accounts.GetAccountAndSubAccountsByAccountId(c, uid, fundId, accountModifyReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[accounts.AccountModifyHandler] failed to get account \"id:%d\" for user \"uid:%d\", because %s", accountModifyReq.Id, uid, err.Error())
@@ -463,7 +497,7 @@ func (a *AccountsApi) AccountModifyHandler(c *core.WebContext) (any, *errs.Error
 		if _, exists := accountMap[subAccountReq.Id]; !exists {
 			anythingUpdate = true
 			maxOrderId = maxOrderId + 1
-			newSubAccount := a.createNewSubAccountModelForModify(uid, mainAccount.Type, subAccountReq, maxOrderId)
+			newSubAccount := a.createNewSubAccountModelForModify(uid, fundId, mainAccount.Type, subAccountReq, maxOrderId)
 			toAddAccounts = append(toAddAccounts, newSubAccount)
 
 			if subAccountReq.BalanceTime != nil {
@@ -493,7 +527,7 @@ func (a *AccountsApi) AccountModifyHandler(c *core.WebContext) (any, *errs.Error
 			accountId, err := utils.StringToInt64(remark)
 
 			if err == nil {
-				accountAndSubAccounts, err := a.accounts.GetAccountAndSubAccountsByAccountId(c, uid, accountId)
+				accountAndSubAccounts, err := a.accounts.GetAccountAndSubAccountsByAccountId(c, uid, fundId, accountId)
 
 				if err != nil {
 					log.Errorf(c, "[accounts.AccountModifyHandler] failed to get existed account \"id:%d\" for user \"uid:%d\", because %s", accountId, uid, err.Error())
@@ -608,7 +642,14 @@ func (a *AccountsApi) AccountHideHandler(c *core.WebContext) (any, *errs.Error) 
 	}
 
 	uid := c.GetCurrentUid()
-	err = a.accounts.HideAccount(c, uid, []int64{accountHideReq.Id}, accountHideReq.Hidden)
+
+	// Get fundId from URL parameter or use default personal fund
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	err = a.accounts.HideAccount(c, uid, fundId, []int64{accountHideReq.Id}, accountHideReq.Hidden)
 
 	if err != nil {
 		log.Errorf(c, "[accounts.AccountHideHandler] failed to hide account \"id:%d\" for user \"uid:%d\", because %s", accountHideReq.Id, uid, err.Error())
@@ -643,7 +684,13 @@ func (a *AccountsApi) AccountMoveHandler(c *core.WebContext) (any, *errs.Error) 
 		accounts[i] = account
 	}
 
-	err = a.accounts.ModifyAccountDisplayOrders(c, uid, accounts)
+	// Get fundId from URL parameter or use default personal fund
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	err = a.accounts.ModifyAccountDisplayOrders(c, uid, fundId, accounts)
 
 	if err != nil {
 		log.Errorf(c, "[accounts.AccountMoveHandler] failed to move accounts for user \"uid:%d\", because %s", uid, err.Error())
@@ -665,7 +712,14 @@ func (a *AccountsApi) AccountDeleteHandler(c *core.WebContext) (any, *errs.Error
 	}
 
 	uid := c.GetCurrentUid()
-	err = a.accounts.DeleteAccount(c, uid, accountDeleteReq.Id)
+
+	// Get fundId from URL parameter or use default personal fund
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	err = a.accounts.DeleteAccount(c, uid, fundId, accountDeleteReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[accounts.AccountDeleteHandler] failed to delete account \"id:%d\" for user \"uid:%d\", because %s", accountDeleteReq.Id, uid, err.Error())
@@ -687,7 +741,14 @@ func (a *AccountsApi) SubAccountDeleteHandler(c *core.WebContext) (any, *errs.Er
 	}
 
 	uid := c.GetCurrentUid()
-	err = a.accounts.DeleteSubAccount(c, uid, accountDeleteReq.Id)
+
+	// Get fundId from URL parameter or use default personal fund
+	fundId, errFund := GetFundIdFromContext(c, uid)
+	if errFund != nil {
+		return nil, errFund
+	}
+
+	err = a.accounts.DeleteSubAccount(c, uid, fundId, accountDeleteReq.Id)
 
 	if err != nil {
 		log.Errorf(c, "[accounts.SubAccountDeleteHandler] failed to delete sub-account \"id:%d\" for user \"uid:%d\", because %s", accountDeleteReq.Id, uid, err.Error())
@@ -698,7 +759,7 @@ func (a *AccountsApi) SubAccountDeleteHandler(c *core.WebContext) (any, *errs.Er
 	return true, nil
 }
 
-func (a *AccountsApi) createNewAccountModel(uid int64, accountCreateReq *models.AccountCreateRequest, isSubAccount bool, order int32) *models.Account {
+func (a *AccountsApi) createNewAccountModel(uid int64, fundId int64, accountCreateReq *models.AccountCreateRequest, isSubAccount bool, order int32) *models.Account {
 	accountExtend := &models.AccountExtend{}
 
 	if !isSubAccount && accountCreateReq.Category == models.ACCOUNT_CATEGORY_CREDIT_CARD {
@@ -707,6 +768,7 @@ func (a *AccountsApi) createNewAccountModel(uid int64, accountCreateReq *models.
 
 	return &models.Account{
 		Uid:          uid,
+		FundId:       fundId,
 		Name:         accountCreateReq.Name,
 		DisplayOrder: order,
 		Category:     accountCreateReq.Category,
@@ -720,11 +782,12 @@ func (a *AccountsApi) createNewAccountModel(uid int64, accountCreateReq *models.
 	}
 }
 
-func (a *AccountsApi) createNewSubAccountModelForModify(uid int64, accountType models.AccountType, accountModifyReq *models.AccountModifyRequest, order int32) *models.Account {
+func (a *AccountsApi) createNewSubAccountModelForModify(uid int64, fundId int64, accountType models.AccountType, accountModifyReq *models.AccountModifyRequest, order int32) *models.Account {
 	accountExtend := &models.AccountExtend{}
 
 	return &models.Account{
 		Uid:          uid,
+		FundId:       fundId,
 		Name:         accountModifyReq.Name,
 		DisplayOrder: order,
 		Category:     accountModifyReq.Category,
@@ -738,7 +801,7 @@ func (a *AccountsApi) createNewSubAccountModelForModify(uid int64, accountType m
 	}
 }
 
-func (a *AccountsApi) createSubAccountModels(uid int64, accountCreateReq *models.AccountCreateRequest) ([]*models.Account, []int64) {
+func (a *AccountsApi) createSubAccountModels(uid int64, fundId int64, accountCreateReq *models.AccountCreateRequest) ([]*models.Account, []int64) {
 	if len(accountCreateReq.SubAccounts) <= 0 {
 		return nil, nil
 	}
@@ -747,7 +810,7 @@ func (a *AccountsApi) createSubAccountModels(uid int64, accountCreateReq *models
 	childrenAccountBalanceTimes := make([]int64, len(accountCreateReq.SubAccounts))
 
 	for i := int32(0); i < int32(len(accountCreateReq.SubAccounts)); i++ {
-		childrenAccounts[i] = a.createNewAccountModel(uid, accountCreateReq.SubAccounts[i], true, i+1)
+		childrenAccounts[i] = a.createNewAccountModel(uid, fundId, accountCreateReq.SubAccounts[i], true, i+1)
 		childrenAccountBalanceTimes[i] = accountCreateReq.SubAccounts[i].BalanceTime
 	}
 
@@ -764,6 +827,7 @@ func (a *AccountsApi) getToUpdateAccount(uid int64, accountModifyReq *models.Acc
 	newAccount := &models.Account{
 		AccountId: oldAccount.AccountId,
 		Uid:       uid,
+		FundId:    oldAccount.FundId,
 		Name:      accountModifyReq.Name,
 		Category:  accountModifyReq.Category,
 		Icon:      accountModifyReq.Icon,

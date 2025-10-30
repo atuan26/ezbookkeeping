@@ -3,9 +3,9 @@ import { computed } from 'vue';
 import { useI18n } from '@/locales/helpers.ts';
 
 import { useSettingsStore } from '@/stores/setting.ts';
-import { useUserStore } from '@/stores/user.ts';
 import { useAccountsStore } from '@/stores/account.ts';
 import { useOverviewStore } from '@/stores/overview.ts';
+import { useFundsStore } from '@/stores/fund.ts';
 
 import type { HiddenAmount, NumberWithSuffix } from '@/core/numeral.ts';
 import { DISPLAY_HIDDEN_AMOUNT, INCOMPLETE_AMOUNT_SUFFIX } from '@/consts/numeral.ts';
@@ -27,16 +27,16 @@ export function useHomePageBase() {
     } = useI18n();
 
     const settingsStore = useSettingsStore();
-    const userStore = useUserStore();
     const accountsStore = useAccountsStore();
     const overviewStore = useOverviewStore();
+    const fundsStore = useFundsStore();
 
     const showAmountInHomePage = computed<boolean>({
         get: () => settingsStore.appSettings.showAmountInHomePage,
         set: (value) => settingsStore.setShowAmountInHomePage(value)
     });
 
-    const defaultCurrency = computed<string>(() => userStore.currentUserDefaultCurrency);
+    const defaultCurrency = computed<string>(() => fundsStore.currentCurrency);
     const allAccounts = computed<Account[]>(() => accountsStore.allAccounts);
 
     const netAssets = computed<string>(() => {

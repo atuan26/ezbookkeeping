@@ -4,6 +4,7 @@ import { defineStore } from 'pinia';
 import { useSettingsStore } from './setting.ts';
 import { useUserStore } from './user.ts';
 import { useAccountsStore } from './account.ts';
+import { useFundsStore } from './fund.ts';
 import { useTransactionCategoriesStore } from './transactionCategory.ts';
 import { useExchangeRatesStore } from './exchangeRates.ts';
 
@@ -151,6 +152,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
     const settingsStore = useSettingsStore();
     const userStore = useUserStore();
     const accountsStore = useAccountsStore();
+    const fundsStore = useFundsStore();
     const transactionCategoriesStore = useTransactionCategoriesStore();
     const exchangeRatesStore = useExchangeRatesStore();
 
@@ -252,8 +254,8 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
             let amount = account.balance;
 
-            if (account.currency !== userStore.currentUserDefaultCurrency) {
-                const finalAmount = exchangeRatesStore.getExchangedAmount(amount, account.currency, userStore.currentUserDefaultCurrency);
+            if (account.currency !== fundsStore.currentCurrency) {
+                const finalAmount = exchangeRatesStore.getExchangedAmount(amount, account.currency, fundsStore.currentCurrency);
 
                 if (!isNumber(finalAmount)) {
                     continue;
@@ -428,7 +430,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
     function assembleAccountAndCategoryInfo(items: TransactionStatisticResponseItem[]): TransactionStatisticResponseItemWithInfo[] {
         const finalItems: TransactionStatisticResponseItemWithInfo[] = [];
-        const defaultCurrency = userStore.currentUserDefaultCurrency;
+        const defaultCurrency = fundsStore.currentCurrency;
 
         for (const dataItem of items) {
             const item: TransactionStatisticResponseItemWithInfo = {
@@ -1042,13 +1044,16 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
     function loadCategoricalAnalysis({ force }: { force: boolean }): Promise<TransactionStatisticResponse> {
         return new Promise((resolve, reject) => {
-            services.getTransactionStatistics({
-                startTime: transactionStatisticsFilter.value.categoricalChartStartTime,
-                endTime: transactionStatisticsFilter.value.categoricalChartEndTime,
-                tagIds: transactionStatisticsFilter.value.tagIds,
-                tagFilterType: transactionStatisticsFilter.value.tagFilterType,
-                keyword: transactionStatisticsFilter.value.keyword,
-                useTransactionTimezone: settingsStore.appSettings.statistics.defaultTimezoneType === TimezoneTypeForStatistics.TransactionTimezone.type
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.getTransactionStatistics({
+                    startTime: transactionStatisticsFilter.value.categoricalChartStartTime,
+                    endTime: transactionStatisticsFilter.value.categoricalChartEndTime,
+                    tagIds: transactionStatisticsFilter.value.tagIds,
+                    tagFilterType: transactionStatisticsFilter.value.tagFilterType,
+                    keyword: transactionStatisticsFilter.value.keyword,
+                    useTransactionTimezone: settingsStore.appSettings.statistics.defaultTimezoneType === TimezoneTypeForStatistics.TransactionTimezone.type,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 
@@ -1085,13 +1090,16 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
     function loadTrendAnalysis({ force }: { force: boolean }): Promise<TransactionStatisticTrendsResponseItem[]> {
         return new Promise((resolve, reject) => {
-            services.getTransactionStatisticsTrends({
-                startYearMonth: transactionStatisticsFilter.value.trendChartStartYearMonth,
-                endYearMonth: transactionStatisticsFilter.value.trendChartEndYearMonth,
-                tagIds: transactionStatisticsFilter.value.tagIds,
-                tagFilterType: transactionStatisticsFilter.value.tagFilterType,
-                keyword: transactionStatisticsFilter.value.keyword,
-                useTransactionTimezone: settingsStore.appSettings.statistics.defaultTimezoneType === TimezoneTypeForStatistics.TransactionTimezone.type
+            fundsStore.ensureFundLoaded().then((fundId) => {
+                return services.getTransactionStatisticsTrends({
+                    startYearMonth: transactionStatisticsFilter.value.trendChartStartYearMonth,
+                    endYearMonth: transactionStatisticsFilter.value.trendChartEndYearMonth,
+                    tagIds: transactionStatisticsFilter.value.tagIds,
+                    tagFilterType: transactionStatisticsFilter.value.tagFilterType,
+                    keyword: transactionStatisticsFilter.value.keyword,
+                    useTransactionTimezone: settingsStore.appSettings.statistics.defaultTimezoneType === TimezoneTypeForStatistics.TransactionTimezone.type,
+                    fundId: fundId || undefined
+                });
             }).then(response => {
                 const data = response.data;
 

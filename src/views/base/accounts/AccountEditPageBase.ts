@@ -2,14 +2,13 @@ import { ref, computed, watch } from 'vue';
 
 import { useI18n } from '@/locales/helpers.ts';
 
-import { useUserStore } from '@/stores/user.ts';
-
 import type { TypeAndDisplayName } from '@/core/base.ts';
 import { AccountCategory, AccountType } from '@/core/account.ts';
 import type { LocalizedAccountCategory } from '@/core/account.ts';
 import { Account } from '@/models/account.ts';
 
 import { getCurrentUnixTime } from '@/lib/datetime.ts';
+import { useFundsStore } from '@/stores/fund';
 
 export interface DayAndDisplayName {
     readonly day: number;
@@ -19,13 +18,13 @@ export interface DayAndDisplayName {
 export function useAccountEditPageBase() {
     const { tt, getAllAccountCategories, getAllAccountTypes, getMonthdayShortName } = useI18n();
 
-    const userStore = useUserStore();
+    const fundsStore = useFundsStore();
 
     const editAccountId = ref<string | null>(null);
     const clientSessionId = ref<string>('');
     const loading = ref<boolean>(false);
     const submitting = ref<boolean>(false);
-    const account = ref<Account>(Account.createNewAccount(userStore.currentUserDefaultCurrency, getCurrentUnixTime()));
+    const account = ref<Account>(Account.createNewAccount(fundsStore.currentCurrency, getCurrentUnixTime()));
     const subAccounts = ref<Account[]>([]);
 
     const title = computed<string>(() => {
@@ -122,7 +121,7 @@ export function useAccountEditPageBase() {
             return false;
         }
 
-        const subAccount = account.value.createNewSubAccount(userStore.currentUserDefaultCurrency, getCurrentUnixTime());
+        const subAccount = account.value.createNewSubAccount(fundsStore.currentCurrency, getCurrentUnixTime());
         subAccounts.value.push(subAccount);
         return true;
     }
@@ -133,7 +132,7 @@ export function useAccountEditPageBase() {
 
         if (newAccount.subAccounts && newAccount.subAccounts.length > 0) {
             for (const oldSubAccount of newAccount.subAccounts) {
-                const subAccount: Account = account.value.createNewSubAccount(userStore.currentUserDefaultCurrency, getCurrentUnixTime());
+                const subAccount: Account = account.value.createNewSubAccount(fundsStore.currentCurrency, getCurrentUnixTime());
                 subAccount.fillFrom(oldSubAccount);
 
                 subAccounts.value.push(subAccount);
